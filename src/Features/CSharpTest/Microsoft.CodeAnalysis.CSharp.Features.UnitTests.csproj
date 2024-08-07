@@ -27,7 +27,6 @@
   <ItemGroup>
     <PackageReference Include="Basic.Reference.Assemblies.Net60" />
   </ItemGroup>
-  <Import Project="..\..\Analyzers\CSharp\Tests\CSharpAnalyzers.UnitTests.projitems" Label="Shared" />
 
   <Target Name="_DeploySemanticSearchRefAssemblies" AfterTargets="ResolveProjectReferences" Condition="'$(DesignTimeBuild)' != 'true'">
 
