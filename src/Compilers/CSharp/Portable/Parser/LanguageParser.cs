@@ -12706,19 +12706,12 @@ done:;
             TypeSyntax type = null;
 
             if ((this.CurrentToken.Kind != SyntaxKind.OpenParenToken)
-                || LockReachDestroy(() =>
+                || LockReachDestroy(() => ScanTupleType(out _) != ScanTypeFlags.NotType && this.CurrentToken.Kind switch
                 {
-                    if (ScanTupleType(out _) != ScanTypeFlags.NotType)
-                    {
-                        switch (this.CurrentToken.Kind)
-                        {
-                            case SyntaxKind.QuestionToken:    // e.g. `new(a, b)?()`
-                            case SyntaxKind.OpenBracketToken: // e.g. `new(a, b)[]`
-                            case SyntaxKind.OpenParenToken:   // e.g. `new(a, b)()` for better error recovery
-                                return true;
-                        }
-                    }
-                    return false;
+                    SyntaxKind.QuestionToken => true,    // `new(a, b)?()`
+                    SyntaxKind.OpenBracketToken => true, // `new(a, b)[]`
+                    SyntaxKind.OpenParenToken => true,   // `new (a, b)()` for better error recovery
+                    _ => false,
                 }, out _))
             {
                 if ((type = this.ParseType(ParseTypeMode.NewExpression)).Kind == SyntaxKind.ArrayType)
