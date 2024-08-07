@@ -12691,13 +12691,35 @@ done:;
             return this.CurrentToken.Kind == SyntaxKind.OpenBracketToken;
         }
 
+        public bool LockReachDestroy(Func<bool> predicate, out SyntaxToken token, SyntaxKind kind = 0)
+        {
+            using var _1 = this.GetDisposableResetPoint(resetOnDispose: true);
+
+            token = kind == 0 ? this.EatToken() : this.EatToken(kind);
+
+            return predicate();
+        }
+
         private ExpressionSyntax ParseArrayOrObjectCreationExpression()
         {
             SyntaxToken @new = this.EatToken(SyntaxKind.NewKeyword);
-
             TypeSyntax type = null;
 
-            if (!IsImplicitObjectCreation())
+            if ((this.CurrentToken.Kind != SyntaxKind.OpenParenToken)
+                || LockReachDestroy(() =>
+                {
+                    if (ScanTupleType(out _) != ScanTypeFlags.NotType)
+                    {
+                        switch (this.CurrentToken.Kind)
+                        {
+                            case SyntaxKind.QuestionToken:    // e.g. `new(a, b)?()`
+                            case SyntaxKind.OpenBracketToken: // e.g. `new(a, b)[]`
+                            case SyntaxKind.OpenParenToken:   // e.g. `new(a, b)()` for better error recovery
+                                return true;
+                        }
+                    }
+                    return false;
+                }, out _))
             {
                 if ((type = this.ParseType(ParseTypeMode.NewExpression)).Kind == SyntaxKind.ArrayType)
                 {
@@ -12709,31 +12731,6 @@ done:;
                 this.CurrentToken.Kind == SyntaxKind.OpenParenToken ? this.ParseParenthesizedArgumentList() : null, 
                 this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseObjectOrCollectionInitializer() : null);
 
-            bool IsImplicitObjectCreation()
-            {
-                // The caller is expected to have consumed the new keyword.
-                if (this.CurrentToken.Kind != SyntaxKind.OpenParenToken)
-                {
-                    return false;
-                }
-
-                using var _1 = this.GetDisposableResetPoint(resetOnDispose: true);
-
-                this.EatToken(); // open paren
-                ScanTypeFlags scanTypeFlags = ScanTupleType(out _);
-                if (scanTypeFlags != ScanTypeFlags.NotType)
-                {
-                    switch (this.CurrentToken.Kind)
-                    {
-                        case SyntaxKind.QuestionToken:    // e.g. `new(a, b)?()`
-                        case SyntaxKind.OpenBracketToken: // e.g. `new(a, b)[]`
-                        case SyntaxKind.OpenParenToken:   // e.g. `new(a, b)()` for better error recovery
-                            return false;
-                    }
-                }
-
-                return true;
-            }
         }
 
 #nullable enable
