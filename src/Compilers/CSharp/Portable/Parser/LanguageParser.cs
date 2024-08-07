@@ -7059,11 +7059,10 @@ done:
             return result;
         }
 
-        /// <summary>
-        /// Returns TupleType when a possible tuple type is found.
-        /// Note that this is not MustBeType, so that the caller can consider deconstruction syntaxes.
-        /// The caller is expected to have consumed the opening paren.
-        /// </summary>
+        public bool HasTupleType(out SyntaxToken lastTokenOfType)
+            => ScanTupleType(out lastTokenOfType) != ScanTypeFlags.NotType;
+
+        /// <summary> Returns TupleType when a possible tuple type is found. Note that this is not MustBeType, so that the caller can consider deconstruction syntaxes.  The caller is expected to have consumed the opening paren. </summary>
         private ScanTypeFlags ScanTupleType(out SyntaxToken lastTokenOfType)
         {
             var tupleElementType = ScanType(out lastTokenOfType);
@@ -12691,13 +12690,18 @@ done:;
             return this.CurrentToken.Kind == SyntaxKind.OpenBracketToken;
         }
 
-        public bool LockReachDestroy(Func<bool> predicate, out SyntaxToken token, SyntaxKind kind = 0)
+        public bool LockReachDestroy(Func<SyntaxToken, bool> predicate, out SyntaxToken token, SyntaxKind kind = 0)
         {
             using var _1 = this.GetDisposableResetPoint(resetOnDispose: true);
 
             token = kind == 0 ? this.EatToken() : this.EatToken(kind);
 
-            return predicate();
+            return predicate(token);
+        }
+
+        public bool PissAndPrick(Func<SyntaxToken, bool> predicate, SyntaxKind kind = 0)
+        {
+            return LockReachDestroy(token => HasTupleType(out _) && predicate(token), out _, kind);
         }
 
         private ExpressionSyntax ParseArrayOrObjectCreationExpression()
@@ -12705,20 +12709,11 @@ done:;
             SyntaxToken @new = this.EatToken(SyntaxKind.NewKeyword);
             TypeSyntax type = null;
 
-            if ((this.CurrentToken.Kind != SyntaxKind.OpenParenToken)
-                || LockReachDestroy(() => ScanTupleType(out _) != ScanTypeFlags.NotType && this.CurrentToken.Kind switch
-                {
-                    SyntaxKind.QuestionToken => true,    // `new(a, b)?()`
-                    SyntaxKind.OpenBracketToken => true, // `new(a, b)[]`
-                    SyntaxKind.OpenParenToken => true,   // `new (a, b)()` for better error recovery
-                    _ => false,
-                }, out _))
-            {
-                if ((type = this.ParseType(ParseTypeMode.NewExpression)).Kind == SyntaxKind.ArrayType)
-                {
-                    return _syntaxFactory.ArrayCreationExpression(@new, (ArrayTypeSyntax)type, this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseArrayInitializer() : null);
-                }
-            }
+            if ((this.CurrentToken.Kind != SyntaxKind.OpenParenToken) // `new(a, b)[]`, `new(a, b)?()`, and for better error recovery, : `new (a, b)()`.
+                || PissAndPrick(kind: SyntaxKind.OpenParenToken, predicate: token =>
+                    token.Kind is SyntaxKind.QuestionToken or SyntaxKind.OpenBracketToken or SyntaxKind.OpenParenToken)
+                     && (type = this.ParseType(ParseTypeMode.NewExpression)).Kind == SyntaxKind.ArrayType)
+                 return _syntaxFactory.ArrayCreationExpression(@new, (ArrayTypeSyntax)type, this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseArrayInitializer() : null);
 
             return _syntaxFactory.ImplicitOrExplicitObjectCreationExpression(@new, type,
                 this.CurrentToken.Kind == SyntaxKind.OpenParenToken ? this.ParseParenthesizedArgumentList() : null, 
