@@ -15,6 +15,9 @@
       .NET Compiler Platform ("Roslyn") support for C#, Microsoft.CodeAnalysis.CSharp.dll.
     </PackageDescription>
 
+    <!-- Enable output of generated files back into our Generated directory -->
+    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Portable\Microsoft.CodeAnalysis.csproj" />
@@ -28,6 +31,21 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="BoundTree\BoundNodes.xml" />
+    <None Include="BoundTree\BoundNodes.xsd" />
+    <None Include="Generated\CSharp.Generated.g4" />
+    <AdditionalFiles Include="Syntax\Syntax.xml" />
+    <None Include="Syntax\Syntax.xsd" />
+    <None Include="UseSiteDiagnosticsCheckEnforcer\BaseLine.txt" />
+    <None Include="UseSiteDiagnosticsCheckEnforcer\Run.bat" />
+    <None Include="FlowAnalysis\Flow Analysis Design.docx" />
+    <PublicAPI Include="PublicAPI.Shipped.txt" />
+    <PublicAPI Include="PublicAPI.Unshipped.txt" />
+
+    <!-- Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's
+         at least one subdirectory, which is our key that it's coming from a source generator as opposed to something that is coming from
+         some other tool. -->
+    <Compile Remove="$(CompilerGeneratedFilesOutputPath)/*/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Update="CSharpResources.resx" GenerateSource="true" />
@@ -62,7 +80,7 @@
     <InternalsVisibleTo Include="Microsoft.CodeAnalysis.EditorFeatures.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.CodeAnalysis.CSharp.Features.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.CodeAnalysis.CSharp.EditorFeatures.UnitTests" />
-    <InternalsVisibleTo Include="Microsoft.CodeAnalysis.CSharp.Features.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.CodeAnalysis.CSharp.Features.UnitTests"/>
     <InternalsVisibleTo Include="Microsoft.CodeAnalysis.EditorFeatures2.UnitTests" />
     <InternalsVisibleTo Include="CompilerBenchmarks" />
     <InternalsVisibleTo Include="Microsoft.Build.Tasks.CodeAnalysis.UnitTests" />
