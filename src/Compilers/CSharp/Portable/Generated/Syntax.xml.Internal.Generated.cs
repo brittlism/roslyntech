@@ -29012,13 +29012,15 @@ internal partial class ContextAwareSyntax
         return result;
     }
 
-    public ImplicitObjectCreationExpressionSyntax ImplicitObjectCreationExpression(SyntaxToken newKeyword, ArgumentListSyntax argumentList, InitializerExpressionSyntax? initializer)
+    public BaseObjectCreationExpressionSyntax ImplicitOrExplicitObjectCreationExpression(SyntaxToken newKeyword, TypeSyntax? type, ArgumentListSyntax? argumentList, InitializerExpressionSyntax? initializer)
     {
 #if DEBUG
         if (newKeyword == null) throw new ArgumentNullException(nameof(newKeyword));
         if (newKeyword.Kind != SyntaxKind.NewKeyword) throw new ArgumentException(nameof(newKeyword));
-        if (argumentList == null) throw new ArgumentNullException(nameof(argumentList));
+        if (type is null && argumentList is null) throw new ArgumentNullException("TypeSyntax, and ArgumentListSyntax. (1, 2)."); // is null
 #endif
+        if (type is null || type == null)
+            return new ObjectCreationExpressionSyntax(SyntaxKind.ObjectCreationExpression, newKeyword, type, argumentList, initializer, this.context);
 
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.ImplicitObjectCreationExpression, newKeyword, argumentList, initializer, this.context, out hash);
@@ -29031,17 +29033,6 @@ internal partial class ContextAwareSyntax
         }
 
         return result;
-    }
-
-    public ObjectCreationExpressionSyntax ObjectCreationExpression(SyntaxToken newKeyword, TypeSyntax type, ArgumentListSyntax? argumentList, InitializerExpressionSyntax? initializer)
-    {
-#if DEBUG
-        if (newKeyword == null) throw new ArgumentNullException(nameof(newKeyword));
-        if (newKeyword.Kind != SyntaxKind.NewKeyword) throw new ArgumentException(nameof(newKeyword));
-        if (type == null) throw new ArgumentNullException(nameof(type));
-#endif
-
-        return new ObjectCreationExpressionSyntax(SyntaxKind.ObjectCreationExpression, newKeyword, type, argumentList, initializer, this.context);
     }
 
     public WithExpressionSyntax WithExpression(ExpressionSyntax expression, SyntaxToken withKeyword, InitializerExpressionSyntax initializer)
