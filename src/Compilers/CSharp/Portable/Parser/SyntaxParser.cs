@@ -480,9 +480,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 return _lexedTokens[_tokenOffset + n];
             }
         }
-
-        //this method is called very frequently
-        //we should keep it simple so that it can be inlined.
+        protected bool EatToken(out SyntaxToken token)
+        {
+            token = EatToken();
+            return token != null;
+        }
         protected SyntaxToken EatToken()
         {
             var ct = this.CurrentToken;
@@ -496,6 +498,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// </summary>
         protected SyntaxToken TryEatToken(SyntaxKind kind)
             => this.CurrentToken.Kind == kind ? this.EatToken() : null;
+
+        protected bool TryEatToken(SyntaxKind kind, out SyntaxToken token)
+            => null != (token = TryEatToken(kind));
 
         private void MoveToNextToken()
         {
@@ -521,6 +526,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected SyntaxKind EatTokenKind(SyntaxKind kind)
             => this.EatToken(kind).Kind;
+
         protected SyntaxToken EatToken(SyntaxKind kind)
         {
             Debug.Assert(SyntaxFacts.IsAnyToken(kind));
@@ -688,41 +694,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 case SyntaxKind.IdentifierToken:
                     if (SyntaxFacts.IsReservedKeyword(actual))
-                    {
                         return ErrorCode.ERR_IdentifierExpectedKW;   // A keyword -- use special message.
-                    }
                     else
-                    {
                         return ErrorCode.ERR_IdentifierExpected;
-                    }
-
                 case SyntaxKind.SemicolonToken:
                     return ErrorCode.ERR_SemicolonExpected;
-
-                // case TokenKind::Colon:         iError = ERR_ColonExpected;          break;
-                // case TokenKind::OpenParen:     iError = ERR_LparenExpected;         break;
                 case SyntaxKind.CloseParenToken:
                     return ErrorCode.ERR_CloseParenExpected;
                 case SyntaxKind.OpenBraceToken:
                     return ErrorCode.ERR_LbraceExpected;
                 case SyntaxKind.CloseBraceToken:
                     return ErrorCode.ERR_RbraceExpected;
-
-                // case TokenKind::CloseSquare:   iError = ERR_CloseSquareExpected;    break;
                 default:
                     return ErrorCode.ERR_SyntaxError;
             }
         }
-
         protected void GetDiagnosticSpanForMissingToken(out int offset, out int width)
         {
-            // If the previous token has a trailing EndOfLineTrivia,
-            // the missing token diagnostic position is moved to the
-            // end of line containing the previous token and
-            // its width is set to zero.
-            // Otherwise the diagnostic offset and width is set
-            // to the corresponding values of the current token
-
             var trivia = _prevTokenTrailingTrivia;
             if (trivia != null)
             {
@@ -772,23 +760,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         protected TNode AddError<TNode>(TNode node, ErrorCode code, params object[] args) where TNode : GreenNode
         {
             if (!node.IsMissing)
-            {
                 return WithAdditionalDiagnostics(node, MakeError(node, code, args));
-            }
 
             int offset, width;
 
             SyntaxToken token = node as SyntaxToken;
             if (token != null && token.ContainsSkippedText)
             {
-                // This code exists to clean up an anti-pattern:
-                //   1) an undesirable token is parsed,
-                //   2) a desirable missing token is created and the parsed token is appended as skipped text,
-                //   3) an error is attached to the missing token describing the problem.
-                // If this occurs, then this.previousTokenTrailingTrivia is still populated with the trivia 
-                // of the undesirable token (now skipped text).  Since the trivia no longer precedes the
-                // node to which the error is to be attached, the computed offset will be incorrect.
-
                 offset = token.GetLeadingTriviaWidth(); // Should always be zero, but at least we'll do something sensible if it's not.
                 Debug.Assert(offset == 0, "Why are we producing a missing token that has both skipped text and leading trivia?");
 

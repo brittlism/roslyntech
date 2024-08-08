@@ -700,7 +700,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         WRN_EmptySwitch = 1522,
         ERR_ExpectedEndTry = 1524,
         ERR_InvalidExprTerm = 1525,
-        ERR_BadNewExpr = 1526,
+        ///ERR_BadNewExpr = 1526,
         ERR_NoNamespacePrivate = 1527,
         ERR_BadVarDecl = 1528,
         ERR_UsingAfterElements = 1529,

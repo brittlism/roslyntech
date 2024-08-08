@@ -30,5 +30,13 @@ csharp_style_allow_blank_line_after_token_in_arrow_expression_clause_experimenta
 dotnet_diagnostic.RS0062.severity = warning
 
 # XML files
+
+# Default severity for analyzer diagnostics with category 'Style'
+dotnet_analyzer_diagnostic.category-Style.severity = silent
+
+
+# IDE0055: Fix formatting
+dotnet_diagnostic.IDE0055.severity = none
+
 [*.xml]
 indent_size = 2

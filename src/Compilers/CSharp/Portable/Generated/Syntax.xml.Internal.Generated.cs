@@ -5465,17 +5465,20 @@ internal abstract partial class BaseObjectCreationExpressionSyntax : ExpressionS
 internal sealed partial class ImplicitObjectCreationExpressionSyntax : BaseObjectCreationExpressionSyntax
 {
     internal readonly SyntaxToken newKeyword;
-    internal readonly ArgumentListSyntax argumentList;
+    internal readonly ArgumentListSyntax? argumentList;
     internal readonly InitializerExpressionSyntax? initializer;
 
-    internal ImplicitObjectCreationExpressionSyntax(SyntaxKind kind, SyntaxToken newKeyword, ArgumentListSyntax argumentList, InitializerExpressionSyntax? initializer, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+    internal ImplicitObjectCreationExpressionSyntax(SyntaxKind kind, SyntaxToken newKeyword, ArgumentListSyntax? argumentList, InitializerExpressionSyntax? initializer, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
       : base(kind, diagnostics, annotations)
     {
         this.SlotCount = 3;
         this.AdjustFlagsAndWidth(newKeyword);
         this.newKeyword = newKeyword;
-        this.AdjustFlagsAndWidth(argumentList);
-        this.argumentList = argumentList;
+        if (argumentList != null)
+        {
+            this.AdjustFlagsAndWidth(argumentList);
+            this.argumentList = argumentList;
+        }
         if (initializer != null)
         {
             this.AdjustFlagsAndWidth(initializer);
@@ -5483,15 +5486,18 @@ internal sealed partial class ImplicitObjectCreationExpressionSyntax : BaseObjec
         }
     }
 
-    internal ImplicitObjectCreationExpressionSyntax(SyntaxKind kind, SyntaxToken newKeyword, ArgumentListSyntax argumentList, InitializerExpressionSyntax? initializer, SyntaxFactoryContext context)
+    internal ImplicitObjectCreationExpressionSyntax(SyntaxKind kind, SyntaxToken newKeyword, ArgumentListSyntax? argumentList, InitializerExpressionSyntax? initializer, SyntaxFactoryContext context)
       : base(kind)
     {
         this.SetFactoryContext(context);
         this.SlotCount = 3;
         this.AdjustFlagsAndWidth(newKeyword);
         this.newKeyword = newKeyword;
-        this.AdjustFlagsAndWidth(argumentList);
-        this.argumentList = argumentList;
+        if (argumentList != null)
+        {
+            this.AdjustFlagsAndWidth(argumentList);
+            this.argumentList = argumentList;
+        }
         if (initializer != null)
         {
             this.AdjustFlagsAndWidth(initializer);
@@ -5499,14 +5505,17 @@ internal sealed partial class ImplicitObjectCreationExpressionSyntax : BaseObjec
         }
     }
 
-    internal ImplicitObjectCreationExpressionSyntax(SyntaxKind kind, SyntaxToken newKeyword, ArgumentListSyntax argumentList, InitializerExpressionSyntax? initializer)
+    internal ImplicitObjectCreationExpressionSyntax(SyntaxKind kind, SyntaxToken newKeyword, ArgumentListSyntax? argumentList, InitializerExpressionSyntax? initializer)
       : base(kind)
     {
         this.SlotCount = 3;
         this.AdjustFlagsAndWidth(newKeyword);
         this.newKeyword = newKeyword;
-        this.AdjustFlagsAndWidth(argumentList);
-        this.argumentList = argumentList;
+        if (argumentList != null)
+        {
+            this.AdjustFlagsAndWidth(argumentList);
+            this.argumentList = argumentList;
+        }
         if (initializer != null)
         {
             this.AdjustFlagsAndWidth(initializer);
@@ -5517,7 +5526,7 @@ internal sealed partial class ImplicitObjectCreationExpressionSyntax : BaseObjec
     /// <summary>SyntaxToken representing the new keyword.</summary>
     public override SyntaxToken NewKeyword => this.newKeyword;
     /// <summary>ArgumentListSyntax representing the list of arguments passed as part of the object creation expression.</summary>
-    public override ArgumentListSyntax ArgumentList => this.argumentList;
+    public override ArgumentListSyntax? ArgumentList => this.argumentList;
     /// <summary>InitializerExpressionSyntax representing the initializer expression for the object being created.</summary>
     public override InitializerExpressionSyntax? Initializer => this.initializer;
 
@@ -5535,7 +5544,7 @@ internal sealed partial class ImplicitObjectCreationExpressionSyntax : BaseObjec
     public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitImplicitObjectCreationExpression(this);
     public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitImplicitObjectCreationExpression(this);
 
-    public ImplicitObjectCreationExpressionSyntax Update(SyntaxToken newKeyword, ArgumentListSyntax argumentList, InitializerExpressionSyntax initializer)
+    public ImplicitObjectCreationExpressionSyntax Update(SyntaxToken newKeyword, ArgumentListSyntax? argumentList, InitializerExpressionSyntax initializer)
     {
         if (newKeyword != this.NewKeyword || argumentList != this.ArgumentList || initializer != this.Initializer)
         {

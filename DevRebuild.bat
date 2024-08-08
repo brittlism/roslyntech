@@ -1,0 +1,1 @@
+./Build.cmd -Rebuild -Configuration Debug -deployExtensions -launch

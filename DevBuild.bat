@@ -1,1 +1,1 @@
-./Build.cmd -Restore -Configuration Release -deployExtensions -launch
+./Build.cmd -Configuration Debug -deployExtensions -launch

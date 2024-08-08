@@ -7262,8 +7262,9 @@ done:
             FirstElementOfPossibleTupleLiteral,
         }
 
-        private SyntaxKind ParseTypeKind<T>(out T token, ParseTypeMode mode = ParseTypeMode.Normal) where T : TypeSyntax
-            => (token = (T)this.ParseType(mode)).Kind;
+        private SyntaxKind ParseTypeKind(out TypeSyntax node, ParseTypeMode mode = ParseTypeMode.Normal)
+            => (node = this.ParseType(mode)).Kind;
+
         private TypeSyntax ParseType(ParseTypeMode mode = ParseTypeMode.Normal)
         {
             if (this.CurrentToken.Kind == SyntaxKind.RefKeyword)
@@ -7655,9 +7656,7 @@ done:;
                 return ParseFunctionPointerTypeSyntax();
             }
 
-            return this.AddError(
-                this.CreateMissingIdentifierName(),
-                mode == ParseTypeMode.NewExpression ? ErrorCode.ERR_BadNewExpr : ErrorCode.ERR_TypeExpected);
+            return this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_TypeExpected);
         }
 
 #nullable enable
@@ -11391,7 +11390,7 @@ done:;
                             : this.ParseCastOrParenExpressionOrTuple();
                     }
                 case SyntaxKind.NewKeyword:
-                    return this.ParseNewExpression();
+                    return this.ParseNewExpression(this.EatToken(SyntaxKind.NewKeyword));
                 case SyntaxKind.StackAllocKeyword:
                     return this.ParseStackAllocExpression();
                 case SyntaxKind.DelegateKeyword:
@@ -12570,23 +12569,65 @@ done:;
             }
         }
 
-        private ExpressionSyntax ParseNewExpression()
+        private ExpressionSyntax ParseNewExpression(SyntaxToken @new)
         {
-            Debug.Assert(this.CurrentToken.Kind == SyntaxKind.NewKeyword);
+            if (this.TryEatToken(SyntaxKind.OpenBraceToken, out SyntaxToken openBrace))
+            {
+                var expressions = ParseCommaSeparatedSyntaxList(
+                    ref openBrace, SyntaxKind.CloseBraceToken,
+                    static @this => @this.IsPossibleExpression(),
+                    static @this => @this.ParseAnonymousTypeMemberInitializer(),
+                    SkipBadInitializerListTokens,
+                    allowTrailingSeparator: true,
+                    requireOneElement: false,
+                    allowSemicolonAsSeparator: false);
 
-            if (this.IsAnonymousType())
-            {
-                return this.ParseAnonymousTypeExpression();
+                return _syntaxFactory.AnonymousObjectCreationExpression(
+                    @new, openBrace, expressions, this.EatToken(SyntaxKind.CloseBraceToken));
             }
-            else if (this.IsImplicitlyTypedArray())
+            else if (this.TryEatToken(SyntaxKind.OpenBracketToken, out SyntaxToken openBracket))
             {
-                return this.ParseImplicitlyTypedArrayCreation();
+                var commas = _pool.Allocate();
+                int lastTokenPosition = -1;
+                while (IsMakingProgress(ref lastTokenPosition))
+                {
+                    if (this.IsPossibleExpression())
+                    {
+                        var size = this.AddError(this.ParseExpressionCore(), ErrorCode.ERR_InvalidArray);
+                        if (commas.Count == 0)
+                        {
+                            openBracket = AddTrailingSkippedSyntax(openBracket, size);
+                        }
+                        else
+                        {
+                            AddTrailingSkippedSyntax(commas, size);
+                        }
+                    }
+
+                    if (this.CurrentToken.Kind == SyntaxKind.CommaToken)
+                    {
+                        commas.Add(this.EatToken());
+                        continue;
+                    }
+
+                    break;
+                }
+
+                return _syntaxFactory.ImplicitArrayCreationExpression(
+                    @new, openBracket, _pool.ToTokenListAndFree(commas),
+                    this.EatToken(SyntaxKind.CloseBracketToken), 
+                    this.ParseArrayInitializer());
             }
-            else
-            {
-                // assume object creation as default case
-                return this.ParseArrayOrObjectCreationExpression();
-            }
+            TypeSyntax type = null;
+
+            // assume object creation as default case                                                                                   /////// `new(a, b)?()`, `new(a, b)[]`, and for better error recovery,: `new (a, b)()`.
+            if ((this.CurrentToken.Kind != SyntaxKind.OpenParenToken || PopTokenSafely(token => HasTuple && this.CurrentToken.Kind is SyntaxKind.QuestionToken or SyntaxKind.OpenBracketToken or SyntaxKind.OpenParenToken, out _))
+                    && this.ParseTypeKind(out type, ParseTypeMode.NewExpression) == SyntaxKind.ArrayType)
+                return _syntaxFactory.ArrayCreationExpression(@new, (ArrayTypeSyntax)type, this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseArrayInitializer() : null);
+
+            return _syntaxFactory.ImplicitOrExplicitObjectCreationExpression(@new, type is IdentifierNameSyntax name && name.ToString().Length == 0 ? null : type,
+                this.CurrentToken.Kind == SyntaxKind.OpenParenToken ? this.ParseParenthesizedArgumentList() : null,
+                this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseObjectOrCollectionInitializer() : null);
         }
 
         private CollectionExpressionSyntax ParseCollectionExpression()
@@ -12633,36 +12674,6 @@ done:;
             return _syntaxFactory.ExpressionElement(expression);
         }
 
-        private bool IsAnonymousType()
-        {
-            return this.CurrentToken.Kind == SyntaxKind.NewKeyword && this.PeekToken(1).Kind == SyntaxKind.OpenBraceToken;
-        }
-
-        private AnonymousObjectCreationExpressionSyntax ParseAnonymousTypeExpression()
-        {
-            Debug.Assert(IsAnonymousType());
-            var @new = this.EatToken(SyntaxKind.NewKeyword);
-
-            Debug.Assert(this.CurrentToken.Kind == SyntaxKind.OpenBraceToken);
-
-            var openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
-            var expressions = ParseCommaSeparatedSyntaxList(
-                ref openBrace,
-                SyntaxKind.CloseBraceToken,
-                static @this => @this.IsPossibleExpression(),
-                static @this => @this.ParseAnonymousTypeMemberInitializer(),
-                SkipBadInitializerListTokens,
-                allowTrailingSeparator: true,
-                requireOneElement: false,
-                allowSemicolonAsSeparator: false);
-
-            return _syntaxFactory.AnonymousObjectCreationExpression(
-                @new,
-                openBrace,
-                expressions,
-                this.EatToken(SyntaxKind.CloseBraceToken));
-        }
-
         private AnonymousObjectMemberDeclaratorSyntax ParseAnonymousTypeMemberInitializer()
         {
             return _syntaxFactory.AnonymousObjectMemberDeclarator(
@@ -12693,93 +12704,11 @@ done:;
             return this.CurrentToken.Kind == SyntaxKind.OpenBracketToken;
         }
 
-        public Procedure PopTokenSafely<Procedure>(Func<SyntaxToken, Procedure> relegate)
+        public Procedure PopTokenSafely<Procedure>(Func<SyntaxToken, Procedure> relegate, out SyntaxToken token, SyntaxKind expectedKind = 0, bool enforceKindExpectation = false)
         {
             using var _1 = this.GetDisposableResetPoint(resetOnDispose: true);
-            return relegate(this.EatToken());
-        }
 
-        private ExpressionSyntax ParseArrayOrObjectCreationExpression()
-        {/*
-            ArrayTypeSyntax type = null;
-            SyntaxToken @new = this.EatToken(SyntaxKind.NewKeyword);
-            /////////////////////////////////////  `new(a, b)?()`, `new(a, b)[]`, and for better error recovery,: `new (a, b)()`.
-            if ((this.CurrentToken.Kind != SyntaxKind.OpenParenToken ||
-                PopTokenSafely(token => token.Kind is SyntaxKind.QuestionToken or SyntaxKind.OpenBracketToken or SyntaxKind.OpenParenToken)
-                    && this.ParseTypeKind(out type, ParseTypeMode.NewExpression) == SyntaxKind.ArrayType))
-                return _syntaxFactory.ArrayCreationExpression(@new, type, this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseArrayInitializer() : null);
-
-            return _syntaxFactory.ImplicitOrExplicitObjectCreationExpression(@new, type,
-                this.CurrentToken.Kind == SyntaxKind.OpenParenToken ? this.ParseParenthesizedArgumentList() : null,
-                this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseObjectOrCollectionInitializer() : null);*/
-
-            SyntaxToken @new = this.EatToken(SyntaxKind.NewKeyword);
-
-            TypeSyntax type = null;
-            InitializerExpressionSyntax initializer = null;
-
-            if (!IsImplicitObjectCreation())
-            {
-                type = this.ParseType(ParseTypeMode.NewExpression);
-                if (type.Kind == SyntaxKind.ArrayType)
-                {
-                    // Check for an initializer.
-                    if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
-                    {
-                        initializer = this.ParseArrayInitializer();
-                    }
-
-                    return _syntaxFactory.ArrayCreationExpression(@new, (ArrayTypeSyntax)type, initializer);
-                }
-            }
-
-            ArgumentListSyntax argumentList = null;
-            if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
-            {
-                argumentList = this.ParseParenthesizedArgumentList();
-            }
-
-            if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
-            {
-                initializer = this.ParseObjectOrCollectionInitializer();
-            }
-
-            // we need one or the other.  also, don't bother reporting this if we already complained about the new type.
-            if (argumentList == null && initializer == null)
-            {
-                argumentList = _syntaxFactory.ArgumentList(
-                    this.EatToken(SyntaxKind.OpenParenToken, ErrorCode.ERR_BadNewExpr, reportError: type?.ContainsDiagnostics == false),
-                    default(SeparatedSyntaxList<ArgumentSyntax>),
-                    SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
-            }
-
-            return _syntaxFactory.ImplicitOrExplicitObjectCreationExpression(@new, type, argumentList, initializer);
-
-            bool IsImplicitObjectCreation()
-            {
-                // The caller is expected to have consumed the new keyword.
-                if (this.CurrentToken.Kind != SyntaxKind.OpenParenToken)
-                {
-                    return false;
-                }
-
-                using var _1 = this.GetDisposableResetPoint(resetOnDispose: true);
-
-                this.EatToken(); // open paren
-                ScanTypeFlags scanTypeFlags = ScanTupleType(out _);
-                if (scanTypeFlags != ScanTypeFlags.NotType)
-                {
-                    switch (this.CurrentToken.Kind)
-                    {
-                        case SyntaxKind.QuestionToken:    // e.g. `new(a, b)?()`
-                        case SyntaxKind.OpenBracketToken: // e.g. `new(a, b)[]`
-                        case SyntaxKind.OpenParenToken:   // e.g. `new(a, b)()` for better error recovery
-                            return false;
-                    }
-                }
-
-                return true;
-            }
+            return relegate(token = expectedKind != 0 ? enforceKindExpectation ? this.EatToken(expectedKind) : this.TryEatToken(expectedKind) : this.EatToken());
         }
 
 #nullable enable
@@ -12937,52 +12866,6 @@ done:;
                 this.EatToken(SyntaxKind.CloseBraceToken));
         }
 
-        private bool IsImplicitlyTypedArray()
-        {
-            Debug.Assert(this.CurrentToken.Kind is SyntaxKind.NewKeyword or SyntaxKind.StackAllocKeyword);
-            return this.PeekToken(1).Kind == SyntaxKind.OpenBracketToken;
-        }
-
-        private ImplicitArrayCreationExpressionSyntax ParseImplicitlyTypedArrayCreation()
-        {
-            var @new = this.EatToken(SyntaxKind.NewKeyword);
-            var openBracket = this.EatToken(SyntaxKind.OpenBracketToken);
-
-            var commas = _pool.Allocate();
-
-            int lastTokenPosition = -1;
-            while (IsMakingProgress(ref lastTokenPosition))
-            {
-                if (this.IsPossibleExpression())
-                {
-                    var size = this.AddError(this.ParseExpressionCore(), ErrorCode.ERR_InvalidArray);
-                    if (commas.Count == 0)
-                    {
-                        openBracket = AddTrailingSkippedSyntax(openBracket, size);
-                    }
-                    else
-                    {
-                        AddTrailingSkippedSyntax(commas, size);
-                    }
-                }
-
-                if (this.CurrentToken.Kind == SyntaxKind.CommaToken)
-                {
-                    commas.Add(this.EatToken());
-                    continue;
-                }
-
-                break;
-            }
-
-            return _syntaxFactory.ImplicitArrayCreationExpression(
-                @new,
-                openBracket,
-                _pool.ToTokenListAndFree(commas),
-                this.EatToken(SyntaxKind.CloseBracketToken),
-                this.ParseArrayInitializer());
-        }
-
         private InitializerExpressionSyntax ParseArrayInitializer()
         {
             var openBrace = this.EatToken(SyntaxKind.OpenBraceToken);
@@ -13014,7 +12897,7 @@ done:;
 
         private ExpressionSyntax ParseStackAllocExpression()
         {
-            return this.IsImplicitlyTypedArray()
+            return this.PeekToken(1).Kind == SyntaxKind.OpenBracketToken // IsImplicitlyTypedArray
                 ? ParseImplicitlyTypedStackAllocExpression()
                 : ParseRegularStackAllocExpression();
         }
