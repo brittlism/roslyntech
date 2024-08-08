@@ -29012,15 +29012,10 @@ internal partial class ContextAwareSyntax
         return result;
     }
 
-    public BaseObjectCreationExpressionSyntax ImplicitOrExplicitObjectCreationExpression(SyntaxToken newKeyword, TypeSyntax? type, ArgumentListSyntax? argumentList, InitializerExpressionSyntax? initializer)
+    public BaseObjectCreationExpressionSyntax ImplicitOrExplicitObjectCreationExpression(SyntaxToken newKeyword, TypeSyntax type, ArgumentListSyntax argumentList, InitializerExpressionSyntax? initializer)
     {
-#if DEBUG
-        if (newKeyword == null) throw new ArgumentNullException(nameof(newKeyword));
-        if (newKeyword.Kind != SyntaxKind.NewKeyword) throw new ArgumentException(nameof(newKeyword));
-        if (type is null && argumentList is null) throw new ArgumentNullException("TypeSyntax, and ArgumentListSyntax. (1, 2)."); // is null
-#endif
-        if (type is null || type == null)
-            return new ObjectCreationExpressionSyntax(SyntaxKind.ObjectCreationExpression, newKeyword, type, argumentList, initializer, this.context);
+        argumentList ??= this.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
+        if (type is not null) return new ObjectCreationExpressionSyntax(SyntaxKind.ObjectCreationExpression, newKeyword, type, argumentList, initializer, this.context);
 
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.ImplicitObjectCreationExpression, newKeyword, argumentList, initializer, this.context, out hash);
@@ -29092,12 +29087,6 @@ internal partial class ContextAwareSyntax
 
     public ArrayCreationExpressionSyntax ArrayCreationExpression(SyntaxToken newKeyword, ArrayTypeSyntax type, InitializerExpressionSyntax? initializer)
     {
-#if DEBUG
-        if (newKeyword == null) throw new ArgumentNullException(nameof(newKeyword));
-        if (newKeyword.Kind != SyntaxKind.NewKeyword) throw new ArgumentException(nameof(newKeyword));
-        if (type == null) throw new ArgumentNullException(nameof(type));
-#endif
-
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.ArrayCreationExpression, newKeyword, type, initializer, this.context, out hash);
         if (cached != null) return (ArrayCreationExpressionSyntax)cached;

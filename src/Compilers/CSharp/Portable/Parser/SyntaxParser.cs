@@ -518,6 +518,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         //this method is called very frequently
         //we should keep it simple so that it can be inlined.
+
+        protected SyntaxKind EatTokenKind(SyntaxKind kind)
+            => this.EatToken(kind).Kind;
         protected SyntaxToken EatToken(SyntaxKind kind)
         {
             Debug.Assert(SyntaxFacts.IsAnyToken(kind));
