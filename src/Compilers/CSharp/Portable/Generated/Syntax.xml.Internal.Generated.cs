@@ -29014,7 +29014,7 @@ internal partial class ContextAwareSyntax
 
     public BaseObjectCreationExpressionSyntax ImplicitOrExplicitObjectCreationExpression(SyntaxToken newKeyword, TypeSyntax type, ArgumentListSyntax argumentList, InitializerExpressionSyntax? initializer)
     {
-        argumentList ??= this.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
+        //argumentList ??= this.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
         if (type is not null) return new ObjectCreationExpressionSyntax(SyntaxKind.ObjectCreationExpression, newKeyword, type, argumentList, initializer, this.context);
 
         int hash;

@@ -12700,7 +12700,7 @@ done:;
         }
 
         private ExpressionSyntax ParseArrayOrObjectCreationExpression()
-        {
+        {/*
             ArrayTypeSyntax type = null;
             SyntaxToken @new = this.EatToken(SyntaxKind.NewKeyword);
             /////////////////////////////////////  `new(a, b)?()`, `new(a, b)[]`, and for better error recovery,: `new (a, b)()`.
@@ -12711,7 +12711,75 @@ done:;
 
             return _syntaxFactory.ImplicitOrExplicitObjectCreationExpression(@new, type,
                 this.CurrentToken.Kind == SyntaxKind.OpenParenToken ? this.ParseParenthesizedArgumentList() : null,
-                this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseObjectOrCollectionInitializer() : null);
+                this.CurrentToken.Kind == SyntaxKind.OpenBraceToken ? this.ParseObjectOrCollectionInitializer() : null);*/
+
+            SyntaxToken @new = this.EatToken(SyntaxKind.NewKeyword);
+
+            TypeSyntax type = null;
+            InitializerExpressionSyntax initializer = null;
+
+            if (!IsImplicitObjectCreation())
+            {
+                type = this.ParseType(ParseTypeMode.NewExpression);
+                if (type.Kind == SyntaxKind.ArrayType)
+                {
+                    // Check for an initializer.
+                    if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
+                    {
+                        initializer = this.ParseArrayInitializer();
+                    }
+
+                    return _syntaxFactory.ArrayCreationExpression(@new, (ArrayTypeSyntax)type, initializer);
+                }
+            }
+
+            ArgumentListSyntax argumentList = null;
+            if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
+            {
+                argumentList = this.ParseParenthesizedArgumentList();
+            }
+
+            if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
+            {
+                initializer = this.ParseObjectOrCollectionInitializer();
+            }
+
+            // we need one or the other.  also, don't bother reporting this if we already complained about the new type.
+            if (argumentList == null && initializer == null)
+            {
+                argumentList = _syntaxFactory.ArgumentList(
+                    this.EatToken(SyntaxKind.OpenParenToken, ErrorCode.ERR_BadNewExpr, reportError: type?.ContainsDiagnostics == false),
+                    default(SeparatedSyntaxList<ArgumentSyntax>),
+                    SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
+            }
+
+            return _syntaxFactory.ImplicitOrExplicitObjectCreationExpression(@new, type, argumentList, initializer);
+
+            bool IsImplicitObjectCreation()
+            {
+                // The caller is expected to have consumed the new keyword.
+                if (this.CurrentToken.Kind != SyntaxKind.OpenParenToken)
+                {
+                    return false;
+                }
+
+                using var _1 = this.GetDisposableResetPoint(resetOnDispose: true);
+
+                this.EatToken(); // open paren
+                ScanTypeFlags scanTypeFlags = ScanTupleType(out _);
+                if (scanTypeFlags != ScanTypeFlags.NotType)
+                {
+                    switch (this.CurrentToken.Kind)
+                    {
+                        case SyntaxKind.QuestionToken:    // e.g. `new(a, b)?()`
+                        case SyntaxKind.OpenBracketToken: // e.g. `new(a, b)[]`
+                        case SyntaxKind.OpenParenToken:   // e.g. `new(a, b)()` for better error recovery
+                            return false;
+                    }
+                }
+
+                return true;
+            }
         }
 
 #nullable enable
