@@ -68,4 +68,5 @@
     <Import Include="System.Xml.Linq" />
     <Import Include="Xunit" />
   </ItemGroup>
+  <Import Project="..\..\..\Analyzers\VisualBasic\Tests\VisualBasicAnalyzers.UnitTests.projitems" Label="Shared" />
 </Project>

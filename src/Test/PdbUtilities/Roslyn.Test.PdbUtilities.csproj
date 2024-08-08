@@ -36,7 +36,7 @@
     <InternalsVisibleTo Include="Microsoft.CodeAnalysis.VisualBasic.ExpressionEvaluator.ResultProvider.UnitTests" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.DiaSymReader" Aliases="DSR" />
+    <PackageReference Include="Microsoft.DiaSymReader" Aliases="DSR"/>
     <PackageReference Include="Microsoft.DiaSymReader.PortablePdb" />
     <PackageReference Include="Microsoft.DiaSymReader.Converter" />
     <PackageReference Include="Microsoft.DiaSymReader.Converter.Xml" />
@@ -56,6 +56,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Compilers\Core\Portable\Microsoft.CodeAnalysis.csproj" />
+    <ProjectReference Include="..\..\Compilers\Test\Core\Microsoft.CodeAnalysis.Test.Utilities.csproj" />
   </ItemGroup>
   <Import Project="$(RepositoryEngineeringDir)targets\DiaSymReaderNative.targets" />
 </Project>
