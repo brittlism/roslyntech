@@ -1983,8 +1983,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             foreach (var pair in membersByName)
             {
-                var name = pair.Key;
-                Symbol? lastSym = GetTypeMembers(name).FirstOrDefault();
+                Symbol? lastSym = GetTypeMembers(pair.Key).FirstOrDefault();
                 methodsBySignature.Clear();
                 // Conversion collisions do not consider the name of the conversion,
                 // so do not clear that dictionary.
@@ -2055,14 +2054,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         lastSym = symbol;
                     }
 
-                    // That takes care of the first category of conflict; we detect the
-                    // second and third categories as follows:
-
-                    var conversion = symbol as SourceUserDefinedConversionSymbol;
-                    var method = symbol as SourceMemberMethodSymbol;
-
+                    // That takes care of the first category of conflict; we detect the second and third categories as follows:
                     // We don't want to consider explicit interface implementations
-                    if (conversion is { MethodKind: MethodKind.Conversion })
+                    if (symbol is SourceUserDefinedConversionSymbol { MethodKind: MethodKind.Conversion } conversion)
                     {
                         // Does this conversion collide *as a conversion* with any previously-seen
                         // conversion?
@@ -2092,10 +2086,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         // Do not add the conversion to the set of previously-seen methods; that set
                         // is only non-conversion methods.
                     }
-                    else if (!(method is null))
+                    else if (symbol is SourceMemberMethodSymbol method && method is not null)
                     {
-                        // Does this method collide *as a method* with any previously-seen
-                        // conversion?
+                        // Does this method collide *as a method* with any previously-seen conversion?
 
                         if (conversionsAsMethods.TryGetValue(method, out var previousConversion))
                         {
