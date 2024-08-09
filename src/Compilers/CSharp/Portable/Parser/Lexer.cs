@@ -474,6 +474,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                             info.Kind = SyntaxKind.DotDotToken;
                         }
+                        /*else if (AdvanceIfMatches('!'))
+                        {
+                            info.Kind = SyntaxKind.DotExcalamationToken;
+                        }*/
                         else
                         {
                             info.Kind = SyntaxKind.DotToken;
@@ -3674,6 +3678,10 @@ top:
 
                         info.Kind = SyntaxKind.DotDotToken;
                     }
+                    /*else if(AdvanceIfMatches('!'))
+                    {
+                        info.Kind = SyntaxKind.DotExcalamationToken;
+                    }*/
                     else
                     {
                         info.Kind = SyntaxKind.DotToken;

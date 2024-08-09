@@ -293,9 +293,10 @@ namespace Microsoft.CodeAnalysis
             get { return this._nodeFlagsAndSlotCount.NodeFlags; }
         }
 
-        internal void SetFlags(NodeFlags flags)
+        internal void SetFlags(NodeFlags? flags)
         {
-            _nodeFlagsAndSlotCount.NodeFlags |= flags;
+            if (flags is not null)
+                _nodeFlagsAndSlotCount.NodeFlags |= flags.Value;
         }
 
         internal void ClearFlags(NodeFlags flags)

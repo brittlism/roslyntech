@@ -113,19 +113,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return SyntaxTrivia.Create(SyntaxKind.PreprocessingMessageTrivia, text);
         }
 
-        public static SyntaxToken Token(SyntaxKind kind)
-        {
-            return SyntaxToken.Create(kind);
-        }
-
         internal static SyntaxToken Token(GreenNode leading, SyntaxKind kind, GreenNode trailing)
         {
             return SyntaxToken.Create(kind, leading, trailing);
         }
 
-        /// <summary>
-        /// Creates a token whose <see cref="SyntaxToken.Text"/> and <see cref="SyntaxToken.ValueText"/> are the same.
-        /// </summary>
+        /// <summary> Creates a token whose <see cref="SyntaxToken.Text"/> and <see cref="SyntaxToken.ValueText"/> are the same. </summary>
         internal static SyntaxToken Token(GreenNode leading, SyntaxKind kind, string text, GreenNode trailing)
         {
             return Token(leading, kind, text, text, trailing);
@@ -142,6 +135,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return kind >= SyntaxToken.FirstTokenWithWellKnownText && kind <= SyntaxToken.LastTokenWithWellKnownText && text == defaultText && valueText == defaultText
                 ? Token(leading, kind, trailing)
                 : SyntaxToken.WithValue(kind, leading, text, valueText, trailing);
+        }
+
+        public static SyntaxToken Merge(SyntaxKind kind, SyntaxToken first, SyntaxToken second)
+        {
+            Debug.Assert(LanguageParser.NoTriviaBetween(first, second));
+            return Token(first.GetLeadingTrivia(), kind, first.Text + second.Text, first.ValueText + second.ValueText, second.GetTrailingTrivia());
         }
 
         internal static SyntaxToken MissingToken(SyntaxKind kind)
@@ -345,5 +344,44 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             return SyntaxToken.GetWellKnownTokens();
         }
+    }
+}
+
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
+{
+    /// <summary>
+    /// Because syntax nodes need to be constructed with context information - to allow us to 
+    /// determine whether or not they can be reused during incremental parsing - the syntax
+    /// factory needs a view of some internal parser state.
+    /// </summary>
+    /// <remarks>
+    /// Read-only outside SyntaxParser (not enforced for perf reasons).
+    /// Reference type so that the factory stays up-to-date.
+    /// </remarks>
+    internal class SyntaxFactoryContext
+    {
+        /// <summary>
+        /// If a method goes from async to non-async, or vice versa, then every occurrence of "await"
+        /// within the method (but not within a lambda) needs to be reinterpreted, to determine whether
+        /// it is a keyword or an identifier.
+        /// </summary>
+        internal bool IsInAsync;
+
+        /// <summary>
+        /// If we are forcing that ?[ is parsed as a conditional-access-expression, and not a conditional-expression
+        /// with a collection-expression in it.
+        /// </summary>
+        internal bool ForceConditionalAccessExpression;
+
+        /// <summary>
+        /// If the end of a query expression statement is commented out, then the following statement may
+        /// appear to be part of the query.  When this occurs, identifiers within the following statement
+        /// may need to be reinterpreted as query keywords.
+        /// </summary>
+        internal bool IsInQuery;
     }
 }

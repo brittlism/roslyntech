@@ -518,7 +518,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         protected void ForceEndOfFile()
         {
-            _currentToken = SyntaxFactory.Token(SyntaxKind.EndOfFileToken);
+            _currentToken = SyntaxKind.EndOfFileToken;
         }
 
         //this method is called very frequently

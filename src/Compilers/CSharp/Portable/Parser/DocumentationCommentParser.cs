@@ -1453,7 +1453,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             if (CurrentToken.Kind == SyntaxKind.OpenBracketToken)
             {
-                var omittedArraySizeExpressionInstance = SyntaxFactory.OmittedArraySizeExpression(SyntaxFactory.Token(SyntaxKind.OmittedArraySizeExpressionToken));
+                var omittedArraySizeExpressionInstance = SyntaxFactory.OmittedArraySizeExpression(SyntaxKind.OmittedArraySizeExpressionToken);
                 var rankList = _pool.Allocate<ArrayRankSpecifierSyntax>();
                 try
                 {

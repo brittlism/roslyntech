@@ -67,7 +67,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             throw ExceptionUtilities.Unreachable();
         }
 
-        internal static SyntaxToken Create(SyntaxKind kind)
+        public static implicit operator SyntaxKind(SyntaxToken token) => token.Kind;
+        public static implicit operator SyntaxToken(SyntaxKind kind)
         {
             if (kind > LastTokenWithWellKnownText)
             {

@@ -2029,30 +2029,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     // * if neither are methods then either we have a field directly
                     //   following a field of the same name, or a field and a nested type of the same name.
                     //
+                    bool alreadyContainedDefinition;
 
-                    if (lastSym is object)
+                    if (alreadyContainedDefinition = lastSym is object &&
+                        !_Enum.EitherWayAround(symbol.Kind, lastSym.Kind, SymbolKind.Method, SymbolKind.Property)
+                        && SymbolKind.Method.OneOrOther(symbol.Kind, lastSym.Kind))
                     {
-                        if (symbol.Kind != SymbolKind.Method || lastSym.Kind != SymbolKind.Method)
+                        if (symbol.Kind != SymbolKind.Field || !symbol.IsImplicitlyDeclared)
                         {
-                            if (symbol.Kind != SymbolKind.Field || !symbol.IsImplicitlyDeclared)
+                            // The type '{0}' already contains a definition for '{1}'
+                            if (Locations.Length == 1 || IsPartial)
                             {
-                                // The type '{0}' already contains a definition for '{1}'
-                                if (Locations.Length == 1 || IsPartial)
-                                {
-                                    diagnostics.Add(ErrorCode.ERR_DuplicateNameInClass, symbol.GetFirstLocation(), this, symbol.Name);
-                                }
-                            }
-
-                            if (lastSym.Kind == SymbolKind.Method)
-                            {
-                                lastSym = symbol;
+                                diagnostics.Add(ErrorCode.ERR_DuplicateNameInClass, symbol.GetFirstLocation(), this, symbol.Name);
                             }
                         }
                     }
-                    else
-                    {
+                    if (!(alreadyContainedDefinition && lastSym.Kind != SymbolKind.Method))
                         lastSym = symbol;
-                    }
 
                     // That takes care of the first category of conflict; we detect the second and third categories as follows:
                     // We don't want to consider explicit interface implementations

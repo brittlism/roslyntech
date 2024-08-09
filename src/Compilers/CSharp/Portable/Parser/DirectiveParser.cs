@@ -726,8 +726,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
             // attach text from extraneous tokens as trivia to EndOfDirective token
             SyntaxToken endOfDirective = this.CurrentToken.Kind == SyntaxKind.EndOfDirectiveToken
-                                         ? this.EatToken()
-                                         : SyntaxFactory.Token(SyntaxKind.EndOfDirectiveToken);
+                                         ? this.EatToken() : SyntaxKind.EndOfDirectiveToken;
 
             if (!skippedTokens.IsNull)
             {
