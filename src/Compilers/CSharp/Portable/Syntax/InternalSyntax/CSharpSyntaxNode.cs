@@ -220,17 +220,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// This should probably be an extra constructor parameter, but we don't need more constructor overloads.
         /// </remarks>
         protected void SetFactoryContext(SyntaxFactoryContext context)
-        {
-            if (context.IsInAsync)
-            {
-                SetFlags(NodeFlags.FactoryContextIsInAsync);
-            }
-
-            if (context.IsInQuery)
-            {
-                SetFlags(NodeFlags.FactoryContextIsInQuery);
-            }
-        }
+            => SetFlags(context.IsInAsync ? NodeFlags.FactoryContextIsInAsync : context.IsInQuery ? NodeFlags.FactoryContextIsInQuery : null);
 
         internal static NodeFlags SetFactoryContext(NodeFlags flags, SyntaxFactoryContext context)
         {
