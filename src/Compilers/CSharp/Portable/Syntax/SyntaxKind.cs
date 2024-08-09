@@ -62,20 +62,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         SingleQuoteToken = 8214,
         /// <summary>Represents <c>&lt;</c> token.</summary>
         LessThanToken = 8215,
-        /// <summary>Represents <c>,</c> token.</summary>
-        CommaToken = 8216,
         /// <summary>Represents <c>&gt;</c> token.</summary>
         GreaterThanToken = 8217,
-        /// <summary>Represents <c>.</c> token.</summary>
-        DotToken = 8218,
         /// <summary>Represents <c>?</c> token.</summary>
         QuestionToken = 8219,
         /// <summary>Represents <c>#</c> token.</summary>
         HashToken = 8220,
         /// <summary>Represents <c>/</c> token.</summary>
         SlashToken = 8221,
+        /// <summary>Represents <c>,</c> token.</summary>
+        CommaToken = 8216,
+        /// <summary>Represents <c>.</c> token.</summary>
+        DotToken = 8218,
         /// <summary>Represents <c>..</c> token.</summary>
         DotDotToken = 8222,
+
+        DotExcalamationToken = 8223,
 
         // Values ranging from 8193 (TildeToken) to 8287 (GreaterThanGreaterThanGreaterThanEqualsToken) are reserved for punctuation kinds.
         // This gap is included within that range. So if you add a value here make sure `SyntaxFacts.GetPunctuationKinds` includes it in the returned enumeration
