@@ -18,11 +18,6 @@ namespace Microsoft.CodeAnalysis
     [DebuggerDisplay("{GetDebuggerDisplay(), nq}")]
     internal abstract partial class GreenNode
     {
-        private string GetDebuggerDisplay()
-        {
-            return this.GetType().Name + " " + this.KindText + " " + this.ToString();
-        }
-
         internal const int ListKind = 1;
 
         // Pack the kind, node-flags, slot-count, and full-width into 64bits. Note: if we need more bits in the future
@@ -36,7 +31,7 @@ namespace Microsoft.CodeAnalysis
         protected const int SlotCountTooLarge = 0b0000000000001111;
 
         private readonly ushort _kind;
-        private NodeFlagsAndSlotCount _nodeFlagsAndSlotCount;
+        internal NodeFlagsAndSlotCount _nodeFlagsAndSlotCount;
         private int _fullWidth;
 
         private static readonly ConditionalWeakTable<GreenNode, DiagnosticInfo[]> s_diagnosticsTable =
@@ -49,21 +44,9 @@ namespace Microsoft.CodeAnalysis
         private static readonly SyntaxAnnotation[] s_noAnnotations = Array.Empty<SyntaxAnnotation>();
         private static readonly IEnumerable<SyntaxAnnotation> s_noAnnotationsEnumerable = SpecializedCollections.EmptyEnumerable<SyntaxAnnotation>();
 
-        protected GreenNode(ushort kind)
-        {
-            _kind = kind;
-        }
-
-        protected GreenNode(ushort kind, int fullWidth)
-        {
-            _kind = kind;
-            _fullWidth = fullWidth;
-        }
-
-        protected GreenNode(ushort kind, DiagnosticInfo[]? diagnostics, int fullWidth)
-        {
-            _kind = kind;
-            _fullWidth = fullWidth;
+        protected GreenNode(ushort kind, int fullWidth = 0) => (this._kind, this._fullWidth) = (kind, fullWidth);
+        protected GreenNode(ushort kind, DiagnosticInfo[]? diagnostics, int fullWidth = 0)
+            : this(kind, fullWidth) {
             if (diagnostics?.Length > 0)
             {
                 SetFlags(NodeFlags.ContainsDiagnostics);
@@ -71,33 +54,8 @@ namespace Microsoft.CodeAnalysis
             }
         }
 
-        protected GreenNode(ushort kind, DiagnosticInfo[]? diagnostics)
-        {
-            _kind = kind;
-            if (diagnostics?.Length > 0)
-            {
-                SetFlags(NodeFlags.ContainsDiagnostics);
-                s_diagnosticsTable.Add(this, diagnostics);
-            }
-        }
-
-        protected GreenNode(ushort kind, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations) :
-            this(kind, diagnostics)
-        {
-            if (annotations?.Length > 0)
-            {
-                foreach (var annotation in annotations)
-                {
-                    if (annotation == null) throw new ArgumentException(paramName: nameof(annotations), message: "" /*CSharpResources.ElementsCannotBeNull*/);
-                }
-
-                SetFlags(NodeFlags.HasAnnotationsDirectly | NodeFlags.ContainsAnnotations);
-                s_annotationsTable.Add(this, annotations);
-            }
-        }
-
-        protected GreenNode(ushort kind, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations, int fullWidth) :
-            this(kind, diagnostics, fullWidth)
+        protected GreenNode(ushort kind, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations, int fullWidth = 0)
+            : this(kind, diagnostics, fullWidth)
         {
             if (annotations?.Length > 0)
             {
@@ -293,16 +251,11 @@ namespace Microsoft.CodeAnalysis
             get { return this._nodeFlagsAndSlotCount.NodeFlags; }
         }
 
-        internal void SetFlags(NodeFlags? flags)
-        {
-            if (flags is not null)
-                _nodeFlagsAndSlotCount.NodeFlags |= flags.Value;
-        }
+        internal void SetFlags(NodeFlags flags)
+            => _nodeFlagsAndSlotCount.NodeFlags |= flags;
 
         internal void ClearFlags(NodeFlags flags)
-        {
-            _nodeFlagsAndSlotCount.NodeFlags &= ~flags;
-        }
+            => _nodeFlagsAndSlotCount.NodeFlags &= ~flags;
 
         internal bool IsMissing
         {

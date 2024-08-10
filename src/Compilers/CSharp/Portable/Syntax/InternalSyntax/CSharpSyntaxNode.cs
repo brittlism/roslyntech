@@ -17,41 +17,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
     [DebuggerDisplay("{GetDebuggerDisplay(), nq}")]
     internal abstract class CSharpSyntaxNode : GreenNode
     {
-        internal CSharpSyntaxNode(SyntaxKind kind)
-            : base((ushort)kind)
-        {
-            GreenStats.NoteGreen(this);
-        }
 
-        internal CSharpSyntaxNode(SyntaxKind kind, int fullWidth)
-            : base((ushort)kind, fullWidth)
-        {
-            GreenStats.NoteGreen(this);
-        }
+        internal CSharpSyntaxNode(SyntaxKind kind, int fullWidth = 0)
+            : base((ushort)kind, fullWidth) { }
 
-        internal CSharpSyntaxNode(SyntaxKind kind, DiagnosticInfo[] diagnostics)
-            : base((ushort)kind, diagnostics)
-        {
-            GreenStats.NoteGreen(this);
-        }
+        internal CSharpSyntaxNode(SyntaxKind kind, DiagnosticInfo[] diagnostics, int fullWidth = 0)
+            : base((ushort)kind, diagnostics, fullWidth) { }
 
-        internal CSharpSyntaxNode(SyntaxKind kind, DiagnosticInfo[] diagnostics, int fullWidth)
-            : base((ushort)kind, diagnostics, fullWidth)
-        {
-            GreenStats.NoteGreen(this);
-        }
-
-        internal CSharpSyntaxNode(SyntaxKind kind, DiagnosticInfo[] diagnostics, SyntaxAnnotation[] annotations)
-            : base((ushort)kind, diagnostics, annotations)
-        {
-            GreenStats.NoteGreen(this);
-        }
-
-        internal CSharpSyntaxNode(SyntaxKind kind, DiagnosticInfo[] diagnostics, SyntaxAnnotation[] annotations, int fullWidth)
-            : base((ushort)kind, diagnostics, annotations, fullWidth)
-        {
-            GreenStats.NoteGreen(this);
-        }
+        internal CSharpSyntaxNode(SyntaxKind kind, DiagnosticInfo[] diagnostics, SyntaxAnnotation[] annotations, int fullWidth = 0)
+            : base((ushort)kind, diagnostics, annotations, fullWidth) { }
 
         public override string Language
         {
@@ -211,30 +185,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Should only be called during construction.
-        /// </summary>
-        /// <remarks>
-        /// This should probably be an extra constructor parameter, but we don't need more constructor overloads.
-        /// </remarks>
-        protected void SetFactoryContext(SyntaxFactoryContext context)
-            => SetFlags(context.IsInAsync ? NodeFlags.FactoryContextIsInAsync : context.IsInQuery ? NodeFlags.FactoryContextIsInQuery : null);
-
-        internal static NodeFlags SetFactoryContext(NodeFlags flags, SyntaxFactoryContext context)
-        {
-            if (context.IsInAsync)
-            {
-                flags |= NodeFlags.FactoryContextIsInAsync;
-            }
-
-            if (context.IsInQuery)
-            {
-                flags |= NodeFlags.FactoryContextIsInQuery;
-            }
-
-            return flags;
         }
 
         public sealed override CodeAnalysis.SyntaxToken CreateSeparator(SyntaxNode element)

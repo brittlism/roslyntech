@@ -169,12 +169,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             return ParseWithStackGuard(
                 static @this => @this.ParseCompilationUnitCore(),
-                static @this => SyntaxFactory.CompilationUnit(
-                    new SyntaxList<ExternAliasDirectiveSyntax>(),
-                    new SyntaxList<UsingDirectiveSyntax>(),
-                    new SyntaxList<AttributeListSyntax>(),
-                    new SyntaxList<MemberDeclarationSyntax>(),
-                    SyntaxFactory.Token(SyntaxKind.EndOfFileToken)));
+                static @this => SyntaxFactory.CompilationUnit(endOfFileToken: SyntaxKind.EndOfFileToken));
         }
 
         internal CompilationUnitSyntax ParseCompilationUnitCore()
@@ -6213,7 +6208,7 @@ parse_member_name:;
             if (isOpenName)
             {
                 // NOTE: trivia will be attached to comma, not omitted type argument
-                var omittedTypeArgumentInstance = _syntaxFactory.OmittedTypeArgument(SyntaxFactory.Token(SyntaxKind.OmittedTypeArgumentToken));
+                var omittedTypeArgumentInstance = _syntaxFactory.OmittedTypeArgument(SyntaxKind.OmittedTypeArgumentToken);
                 types.Add(omittedTypeArgumentInstance);
                 while (this.CurrentToken.Kind == SyntaxKind.CommaToken)
                 {
@@ -7521,7 +7516,7 @@ done:;
             var open = this.EatToken(SyntaxKind.OpenBracketToken);
             var list = _pool.AllocateSeparated<ExpressionSyntax>();
 
-            var omittedArraySizeExpressionInstance = _syntaxFactory.OmittedArraySizeExpression(SyntaxFactory.Token(SyntaxKind.OmittedArraySizeExpressionToken));
+            var omittedArraySizeExpressionInstance = _syntaxFactory.OmittedArraySizeExpression(SyntaxKind.OmittedArraySizeExpressionToken);
             int lastTokenPosition = -1;
             while (IsMakingProgress(ref lastTokenPosition) && this.CurrentToken.Kind != SyntaxKind.CloseBracketToken)
             {
@@ -11580,16 +11575,21 @@ done:;
                         //
                         // It's far more likely the member access expression is simply incomplete and
                         // there is a new declaration on the next line.
-                        if (this.CurrentToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia) &&
-                            this.PeekToken(1).Kind == SyntaxKind.IdentifierToken &&
-                            this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
+
+                        var dotToken = this.EatToken(SyntaxKind.DotToken);
+                        var excToken = NoTriviaBetween(dotToken, CurrentToken) ? this.TryEatToken(SyntaxKind.ExclamationToken) : null;
+                        SyntaxToken syntaxToken = excToken is null ? dotToken : NoTriviaBetween(excToken, dotToken) ? SyntaxFactory.Merge(SyntaxKind.DotExcalamationToken, dotToken, excToken) : dotToken;
+
+                        if (syntaxToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia) &&
+                            this.CurrentToken.Kind == SyntaxKind.IdentifierToken &&
+                            this.PeekToken(1).ContextualKind == SyntaxKind.IdentifierToken)
                         {
                             return _syntaxFactory.MemberAccessExpression(
-                                SyntaxKind.SimpleMemberAccessExpression, expr, this.EatToken(),
+                                SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken,
                                 this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
                         }
 
-                        expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, this.EatToken(), this.ParseSimpleName(NameOptions.InExpression));
+                        expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, this.ParseSimpleName(NameOptions.InExpression));
                         continue;
 
                     case SyntaxKind.QuestionToken:
