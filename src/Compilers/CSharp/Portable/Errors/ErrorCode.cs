@@ -681,7 +681,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         // unused 1205-1500
         ERR_BadArgCount = 1501,
         //ERR_BadArgTypes = 1502,
-        ERR_BadArgType = 1503,
+        ERR_BadArgType = 1500,
         ERR_NoSourceFile = 1504,
         ERR_CantRefResource = 1507,
         ERR_ResourceNotUnique = 1508,
