@@ -102,6 +102,9 @@ namespace Microsoft.CodeAnalysis
             }
         }
 
+        internal Syntax.InternalSyntax.SyntaxList<T> ToGreenList<T>() where T : GreenNode
+            => this.Node == null ? default : new Syntax.InternalSyntax.SyntaxList<T>(this.Node.Green);
+
         /// <summary>
         /// The number of nodes in the list.
         /// </summary>
@@ -482,13 +485,6 @@ namespace Microsoft.CodeAnalysis
             return _node?.GetHashCode() ?? 0;
         }
 
-        [Obsolete("This method is preserved for binary compatibility only. Use explicit cast instead.", error: true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static SyntaxList<TNode> op_Implicit(SyntaxList<SyntaxNode> nodes)
-        {
-            return new SyntaxList<TNode>(nodes._node);
-        }
-
         public static implicit operator SyntaxList<SyntaxNode>(SyntaxList<TNode> nodes)
         {
             return new SyntaxList<SyntaxNode>(nodes.Node);
@@ -575,5 +571,7 @@ namespace Microsoft.CodeAnalysis
 
             return -1;
         }
+
+
     }
 }

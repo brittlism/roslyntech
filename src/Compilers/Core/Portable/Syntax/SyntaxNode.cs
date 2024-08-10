@@ -1654,5 +1654,11 @@ recurse:
 
             return clone;
         }
+
+        internal Syntax.InternalSyntax.SyntaxList<T> ToGreenList<T>() where T : GreenNode
+            => this != null ? new Syntax.InternalSyntax.SyntaxList<T>(this.Green) : default;
+
+        internal Syntax.InternalSyntax.SeparatedSyntaxList<T> ToGreenSeparatedList<T>() where T : GreenNode
+            => this != null ? new Syntax.InternalSyntax.SeparatedSyntaxList<T>(new Syntax.InternalSyntax.SyntaxList<T>(this.Green)) : default;
     }
 }
