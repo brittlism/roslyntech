@@ -108,6 +108,9 @@ namespace Microsoft.CodeAnalysis
 
         internal GreenNode? Node { get; }
 
+        internal Syntax.InternalSyntax.SyntaxList<T> ToGreenList<T>() where T : GreenNode
+            => this.Node == null ? default : new Syntax.InternalSyntax.SyntaxList<T>(this.Node);
+
         internal int Position { get; }
 
         /// <summary>
