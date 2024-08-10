@@ -121,32 +121,26 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.Syntax.InternalSyntax
 
         Protected Sub New(kind As SyntaxKind)
             MyBase.New(CType(kind, UInt16))
-            GreenStats.NoteGreen(Me)
         End Sub
 
         Protected Sub New(kind As SyntaxKind, width As Integer)
             MyBase.New(CType(kind, UInt16), width)
-            GreenStats.NoteGreen(Me)
         End Sub
 
         Protected Sub New(kind As SyntaxKind, errors As DiagnosticInfo())
             MyBase.New(CType(kind, UInt16), errors)
-            GreenStats.NoteGreen(Me)
         End Sub
 
         Protected Sub New(kind As SyntaxKind, errors As DiagnosticInfo(), width As Integer)
             MyBase.New(CType(kind, UInt16), errors, width)
-            GreenStats.NoteGreen(Me)
         End Sub
 
         Friend Sub New(kind As SyntaxKind, diagnostics As DiagnosticInfo(), annotations As SyntaxAnnotation())
             MyBase.New(CType(kind, UInt16), diagnostics, annotations)
-            GreenStats.NoteGreen(Me)
         End Sub
 
         Friend Sub New(kind As SyntaxKind, diagnostics As DiagnosticInfo(), annotations As SyntaxAnnotation(), fullWidth As Integer)
             MyBase.New(CType(kind, UInt16), diagnostics, annotations, fullWidth)
-            GreenStats.NoteGreen(Me)
         End Sub
 
         ''' <summary>
