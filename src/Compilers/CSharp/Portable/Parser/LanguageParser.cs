@@ -11576,21 +11576,29 @@ done:;
                         // It's far more likely the member access expression is simply incomplete and
                         // there is a new declaration on the next line.
 
-                        var dotToken = this.EatToken(SyntaxKind.DotToken);
-                        var excToken = NoTriviaBetween(dotToken, CurrentToken) ? this.TryEatToken(SyntaxKind.ExclamationToken) : null;
-                        SyntaxToken syntaxToken = excToken is null ? dotToken : NoTriviaBetween(excToken, dotToken) ? SyntaxFactory.Merge(SyntaxKind.DotExcalamationToken, dotToken, excToken) : dotToken;
+                        var dotToken = this.EatToken();
+                        var ex = NoTriviaBetween(dotToken, this.CurrentToken) ? this.TryEatToken(SyntaxKind.ExclamationToken) : null;
+                        var syntaxToken = ex is null ? dotToken : SyntaxFactory.MergeTokens(SyntaxKind.DotExcalamationToken, dotToken, ex);
 
                         if (syntaxToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia) &&
-                            this.CurrentToken.Kind == SyntaxKind.IdentifierToken &&
-                            this.PeekToken(1).ContextualKind == SyntaxKind.IdentifierToken)
+                            this.PeekToken(1).Kind == SyntaxKind.IdentifierToken && this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
+                                return MemberAccessExpression(this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
+                        //add the ability for identifiers later (better call/invocations)
+                        expr = MemberAccessExpression(this.ParseSimpleName(NameOptions.InExpression));
+                        
+                        if (ex != null)
                         {
-                            return _syntaxFactory.MemberAccessExpression(
-                                SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken,
-                                this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
+                            if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
+                                expr = _syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null,
+                                    _syntaxFactory.ParameterList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)),
+                                    SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), null, _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList()));
+                            else
+                                expr = _syntaxFactory.InvocationExpression(expr, 
+                                    _syntaxFactory.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)));
                         }
 
-                        expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, this.ParseSimpleName(NameOptions.InExpression));
                         continue;
+                        MemberAccessExpressionSyntax MemberAccessExpression(SimpleNameSyntax name) => _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, name);
 
                     case SyntaxKind.QuestionToken:
                         if (CanStartConsequenceExpression())
@@ -11751,7 +11759,7 @@ done:;
             Debug.Assert((openKind == SyntaxKind.OpenParenToken) == (closeKind == SyntaxKind.CloseParenToken));
             bool isIndexer = openKind == SyntaxKind.OpenBracketToken;
 
-            // convert `[` into `(` or vice versa for error recovery
+            // convert `[` into `(` or vice versa for error recovery???
             openToken = this.CurrentToken.Kind is SyntaxKind.OpenParenToken or SyntaxKind.OpenBracketToken
                 ? this.EatTokenAsKind(openKind)
                 : this.EatToken(openKind);

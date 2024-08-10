@@ -137,7 +137,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 : SyntaxToken.WithValue(kind, leading, text, valueText, trailing);
         }
 
-        public static SyntaxToken Merge(SyntaxKind kind, SyntaxToken first, SyntaxToken second)
+        public static SyntaxToken MergeTokens(SyntaxKind kind, SyntaxToken first, SyntaxToken second)
         {
             Debug.Assert(LanguageParser.NoTriviaBetween(first, second));
             return Token(first.GetLeadingTrivia(), kind, first.Text + second.Text, first.ValueText + second.ValueText, second.GetTrailingTrivia());
