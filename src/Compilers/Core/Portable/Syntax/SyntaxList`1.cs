@@ -105,6 +105,9 @@ namespace Microsoft.CodeAnalysis
         internal Syntax.InternalSyntax.SyntaxList<T> ToGreenList<T>() where T : GreenNode
             => this.Node == null ? default : new Syntax.InternalSyntax.SyntaxList<T>(this.Node.Green);
 
+        internal Syntax.InternalSyntax.SeparatedSyntaxList<T> ToGreenSeparatedList<T>() where T : GreenNode
+            => this.Node != null ? new Syntax.InternalSyntax.SeparatedSyntaxList<T>(new Syntax.InternalSyntax.SyntaxList<T>(this.Node.Green)) : default;
+
         /// <summary>
         /// The number of nodes in the list.
         /// </summary>
