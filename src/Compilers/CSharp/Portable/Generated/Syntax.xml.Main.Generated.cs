@@ -4710,7 +4710,7 @@ public static partial class SyntaxFactory
     public static CompilationUnitSyntax CompilationUnit(SyntaxList<ExternAliasDirectiveSyntax> externs, SyntaxList<UsingDirectiveSyntax> usings, SyntaxList<AttributeListSyntax> attributeLists, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken endOfFileToken)
     {
         if (endOfFileToken.Kind() != SyntaxKind.EndOfFileToken) throw new ArgumentException(nameof(endOfFileToken));
-        return (CompilationUnitSyntax)Syntax.InternalSyntax.SyntaxFactory.CompilationUnit(externs.Node.ToGreenList<Syntax.InternalSyntax.ExternAliasDirectiveSyntax>(), usings.Node.ToGreenList<Syntax.InternalSyntax.UsingDirectiveSyntax>(), attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), members.Node.ToGreenList<Syntax.InternalSyntax.MemberDeclarationSyntax>(), (Syntax.InternalSyntax.SyntaxToken)endOfFileToken.Node!).CreateRed();
+        return (CompilationUnitSyntax)Syntax.InternalSyntax.SyntaxFactory.CompilationUnit((Syntax.InternalSyntax.SyntaxToken)endOfFileToken.Node!, externs.ToGreenList<Syntax.InternalSyntax.ExternAliasDirectiveSyntax>(), usings.Node.ToGreenList<Syntax.InternalSyntax.UsingDirectiveSyntax>(), attributeLists.Node.ToGreenList<Syntax.InternalSyntax.AttributeListSyntax>(), members.Node.ToGreenList<Syntax.InternalSyntax.MemberDeclarationSyntax>()).CreateRed();
     }
 
     /// <summary>Creates a new CompilationUnitSyntax instance.</summary>
