@@ -4,7 +4,7 @@
 
 #nullable disable
 
-using System;
+using NodeFlags = Microsoft.CodeAnalysis.GreenNode.NodeFlags;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -345,14 +345,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return SyntaxToken.GetWellKnownTokens();
         }
     }
-}
 
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
-
-namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
-{
     /// <summary>
     /// Because syntax nodes need to be constructed with context information - to allow us to 
     /// determine whether or not they can be reused during incremental parsing - the syntax
@@ -383,5 +376,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// may need to be reinterpreted as query keywords.
         /// </summary>
         internal bool IsInQuery;
+
+
+        /// <summary>
+        /// Should only be called during construction.
+        /// </summary>
+        /// <remarks>
+        /// This should probably be an extra constructor parameter, but we don't need more constructor overloads.
+        /// </remarks>
+        internal void SetSyntaxNode(CSharpSyntaxNode this_node)
+            => this_node.SetFlags(FactoryFlags);
+
+        internal NodeFlags GetFactoryFlags(ref NodeFlags flags)
+        {
+            var _fl_s = flags;
+            flags |= FactoryFlags;
+            return _fl_s;
+        }
+        internal NodeFlags FactoryFlags
+            => this.IsInAsync ? NodeFlags.FactoryContextIsInAsync : this.IsInQuery ? NodeFlags.FactoryContextIsInQuery : 0;
     }
 }
