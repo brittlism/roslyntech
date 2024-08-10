@@ -11,7 +11,7 @@ namespace Microsoft.CodeAnalysis
         /// <summary>
         /// Combination of <see cref="NodeFlags"/> and <see cref="SlotCount"/> stored in a single 16bit value.
         /// </summary>
-        private struct NodeFlagsAndSlotCount
+        internal struct NodeFlagsAndSlotCount
         {
             /// <summary>
             /// 4 bits for the SlotCount.  This allows slot counts of 0-14 to be stored as a direct byte.  All 1s
