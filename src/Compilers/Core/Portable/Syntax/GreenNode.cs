@@ -46,7 +46,8 @@ namespace Microsoft.CodeAnalysis
 
         protected GreenNode(ushort kind, int fullWidth = 0) => (this._kind, this._fullWidth) = (kind, fullWidth);
         protected GreenNode(ushort kind, DiagnosticInfo[]? diagnostics, int fullWidth = 0)
-            : this(kind, fullWidth) {
+            : this(kind, fullWidth)
+        {
             if (diagnostics?.Length > 0)
             {
                 SetFlags(NodeFlags.ContainsDiagnostics);
@@ -1000,5 +1001,8 @@ namespace Microsoft.CodeAnalysis
             // Get a new green node with the errors added on.
             return SetDiagnostics(errorInfos);
         }
+
+        internal Syntax.InternalSyntax.SyntaxList<T> ToGreenList<T>() where T : GreenNode
+            => this != null ? new Syntax.InternalSyntax.SyntaxList<T>(this) : default;
     }
 }
