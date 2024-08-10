@@ -11520,14 +11520,19 @@ done:;
 
         private ExpressionSyntax ParsePostFixExpression(ExpressionSyntax expr)
         {
-            Debug.Assert(expr != null);
-
+            MemberAccessExpressionSyntax MemberAccessExpression(SyntaxToken syntaxToken, SimpleNameSyntax name) => _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, name);
+            bool Maspingohones() {
+                if (this.CurrentToken.Kind==SyntaxKind.OpenParenToken)
+                    expr =_syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null,
+                        _syntaxFactory.ParameterList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)),
+                        SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), null, _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList()));
+                else return true; return false;
+            }
+            Debug.Assert(expr != null);///
             while (true)
             {
-                // If the set of postfix expressions is updated here, please review ParseStatementAttributeDeclarations
-                // to see if it may need a similar look-ahead check to determine if something is a collection expression
-                // versus an attribute.
-
+                // If the set of postfix expressions is updated here, please review ParseStatementAttributeDeclarations to see if
+                // it  may need a similar look-ahead check to determine if something is a collection expression versus an attribute.
                 switch (this.CurrentToken.Kind)
                 {
                     case SyntaxKind.OpenParenToken:
@@ -11582,23 +11587,15 @@ done:;
 
                         if (syntaxToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia) &&
                             this.PeekToken(1).Kind == SyntaxKind.IdentifierToken && this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
-                                return MemberAccessExpression(this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
+                                return MemberAccessExpression(syntaxToken, this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
                         //add the ability for identifiers later (better call/invocations)
-                        expr = MemberAccessExpression(this.ParseSimpleName(NameOptions.InExpression));
+                        expr = MemberAccessExpression(syntaxToken, this.ParseSimpleName(NameOptions.InExpression));
                         
-                        if (ex != null)
-                        {
-                            if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
-                                expr = _syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null,
-                                    _syntaxFactory.ParameterList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)),
-                                    SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), null, _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList()));
-                            else
-                                expr = _syntaxFactory.InvocationExpression(expr, 
-                                    _syntaxFactory.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)));
-                        }
+                        if (Maspingohones())
+                            expr = _syntaxFactory.InvocationExpression(expr, 
+                                _syntaxFactory.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)));
 
                         continue;
-                        MemberAccessExpressionSyntax MemberAccessExpression(SimpleNameSyntax name) => _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, name);
 
                     case SyntaxKind.QuestionToken:
                         if (CanStartConsequenceExpression())
@@ -11613,7 +11610,11 @@ done:;
                         return expr;
 
                     case SyntaxKind.ExclamationToken:
-                        expr = _syntaxFactory.PostfixUnaryExpression(SyntaxKind.SuppressNullableWarningExpression, expr, this.EatToken());
+                        var exc = this.EatToken();
+
+                        if(Maspingohones())
+                            expr = _syntaxFactory.PostfixUnaryExpression(SyntaxKind.SuppressNullableWarningExpression, expr, exc);
+                            
                         continue;
 
                     default:
