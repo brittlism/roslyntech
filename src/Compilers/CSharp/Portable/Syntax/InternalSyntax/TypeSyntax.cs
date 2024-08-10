@@ -4,9 +4,10 @@
 
 #nullable disable
 
+/// <summary>Provides the base class from which the classes that represent type syntax nodes are derived. This is an abstract class.</summary>
 namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 {
-    internal abstract partial class TypeSyntax
+    internal abstract partial class TypeSyntax : ExpressionSyntax
     {
         public bool IsVar => IsIdentifierName("var");
         public bool IsUnmanaged => IsIdentifierName("unmanaged");
@@ -17,5 +18,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         private bool IsIdentifierName(string id) => this is IdentifierNameSyntax name && name.Identifier.ToString() == id;
 
         public bool IsRef => Kind == SyntaxKind.RefType;
+
+        internal TypeSyntax(SyntaxKind kind, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+          : base(kind, diagnostics, annotations)
+        {
+        }
+
+        internal TypeSyntax(SyntaxKind kind)
+          : base(kind)
+        {
+        }
     }
 }
