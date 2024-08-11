@@ -362,17 +362,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case Accessibility.NotApplicable:
                     return string.Empty;
                 case Accessibility.Private:
-                    return SyntaxFacts.GetText(PrivateKeyword);
+                    return GetText(PrivateKeyword);
                 case Accessibility.ProtectedAndInternal:
-                    return SyntaxFacts.GetText(PrivateKeyword) + " " + SyntaxFacts.GetText(ProtectedKeyword);
+                    return GetText(PrivateKeyword) + " " + GetText(ProtectedKeyword);
                 case Accessibility.Internal:
-                    return SyntaxFacts.GetText(InternalKeyword);
+                    return GetText(InternalKeyword);
                 case Accessibility.Protected:
-                    return SyntaxFacts.GetText(ProtectedKeyword);
+                    return GetText(ProtectedKeyword);
                 case Accessibility.ProtectedOrInternal:
-                    return SyntaxFacts.GetText(ProtectedKeyword) + " " + SyntaxFacts.GetText(InternalKeyword);
+                    return GetText(ProtectedKeyword) + " " + GetText(InternalKeyword);
                 case Accessibility.Public:
-                    return SyntaxFacts.GetText(PublicKeyword);
+                    return GetText(PublicKeyword);
                 default:
                     throw ExceptionUtilities.UnexpectedValue(accessibility);
             }

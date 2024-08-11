@@ -252,6 +252,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         InternalKeyword = 8345,
         /// <summary>Represents <see langword="protected"/>.</summary>
         ProtectedKeyword = 8346,
+        /// <summary>protected internal</summary>
+        ProtectedInternal = 6451,
+        /// <summary>protectedinternal</summary>
+        ProtectedInternalKeyword = 6452,
+        /// <summary>private protected</summary>
+        PrivateProtected = 6453,
+        /// <summary>privateprotected</summary>
+        PrivateProtectedKeyword = 6454,
         /// <summary>Represents <see langword="static"/>.</summary>
         StaticKeyword = 8347,
         /// <summary>Represents <see langword="readonly"/>.</summary>

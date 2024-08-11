@@ -291,11 +291,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 case DeclarationModifiers.Internal:
                     return SyntaxFacts.GetText(SyntaxKind.InternalKeyword);
                 case DeclarationModifiers.ProtectedInternal:
-                    return SyntaxFacts.GetText(SyntaxKind.ProtectedKeyword) + " " + SyntaxFacts.GetText(SyntaxKind.InternalKeyword);
+                    return SyntaxFacts.GetText(SyntaxKind.ProtectedInternal);
                 case DeclarationModifiers.Private:
                     return SyntaxFacts.GetText(SyntaxKind.PrivateKeyword);
                 case DeclarationModifiers.PrivateProtected:
-                    return SyntaxFacts.GetText(SyntaxKind.PrivateKeyword) + " " + SyntaxFacts.GetText(SyntaxKind.ProtectedKeyword);
+                    return SyntaxFacts.GetText(SyntaxKind.PrivateProtected);
                 case DeclarationModifiers.ReadOnly:
                     return SyntaxFacts.GetText(SyntaxKind.ReadOnlyKeyword);
                 case DeclarationModifiers.Const:
@@ -345,12 +345,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     return DeclarationModifiers.New;
                 case SyntaxKind.PublicKeyword:
                     return DeclarationModifiers.Public;
-                case SyntaxKind.ProtectedKeyword:
-                    return DeclarationModifiers.Protected;
-                case SyntaxKind.InternalKeyword:
-                    return DeclarationModifiers.Internal;
                 case SyntaxKind.PrivateKeyword:
                     return DeclarationModifiers.Private;
+                case SyntaxKind.InternalKeyword:
+                    return DeclarationModifiers.Internal;
+                case SyntaxKind.ProtectedKeyword:
+                    return DeclarationModifiers.Protected;
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                    return DeclarationModifiers.ProtectedInternal;
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
+                    return DeclarationModifiers.PrivateProtected;
                 case SyntaxKind.ExternKeyword:
                     return DeclarationModifiers.Extern;
                 case SyntaxKind.ReadOnlyKeyword:

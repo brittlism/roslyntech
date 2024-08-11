@@ -41,9 +41,13 @@ internal partial class PartialMethodCompletionProvider : AbstractPartialMethodCo
             switch (mod.Kind())
             {
                 case SyntaxKind.PublicKeyword:
-                case SyntaxKind.ProtectedKeyword:
-                case SyntaxKind.InternalKeyword:
                 case SyntaxKind.PrivateKeyword:
+                case SyntaxKind.InternalKeyword:
+                case SyntaxKind.ProtectedKeyword:
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
                     return true;
             }
         }

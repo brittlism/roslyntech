@@ -602,6 +602,12 @@ internal readonly struct NameDeclarationInfo(
                     return Accessibility.Protected;
                 case SyntaxKind.InternalKeyword:
                     return Accessibility.Internal;
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                    return Accessibility.ProtectedAndInternal;
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
+                    return Accessibility.Private;
             }
         }
 

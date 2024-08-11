@@ -66,10 +66,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             switch (kind)
             {
-                case SyntaxKind.PrivateKeyword:
-                case SyntaxKind.ProtectedKeyword:
-                case SyntaxKind.InternalKeyword:
                 case SyntaxKind.PublicKeyword:
+                case SyntaxKind.PrivateKeyword:
+                case SyntaxKind.InternalKeyword:
+                case SyntaxKind.ProtectedKeyword:
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
                     return true;
                 default:
                     return false;
@@ -935,6 +939,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return SyntaxKind.InternalKeyword;
                 case "protected":
                     return SyntaxKind.ProtectedKeyword;
+                case "protected internal":
+                    return SyntaxKind.ProtectedInternal;
+                case "protectedinternal":
+                    return SyntaxKind.ProtectedInternalKeyword;
+                case "private protected":
+                    return SyntaxKind.PrivateProtected;
+                case "privateprotected":
+                    return SyntaxKind.PrivateProtectedKeyword;
                 case "static":
                     return SyntaxKind.StaticKeyword;
                 case "readonly":
@@ -1584,6 +1596,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "internal";
                 case SyntaxKind.ProtectedKeyword:
                     return "protected";
+                case SyntaxKind.ProtectedInternal:
+                    return "protected internal";
+                case SyntaxKind.ProtectedInternalKeyword:
+                    return "protectedinternal";
+                case SyntaxKind.PrivateProtected:
+                    return "private protected";
+                case SyntaxKind.PrivateProtectedKeyword:
+                    return "privateprotected";
                 case SyntaxKind.StaticKeyword:
                     return "static";
                 case SyntaxKind.ReadOnlyKeyword:
