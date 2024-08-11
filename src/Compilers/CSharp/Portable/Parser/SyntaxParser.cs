@@ -480,6 +480,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 return _lexedTokens[_tokenOffset + n];
             }
         }
+
+        protected SyntaxToken PeekToken(SyntaxKind kind, out int index_)
+        {
+            for (index_ = 0; this.PeekToken(index_) is SyntaxToken token; index_++)
+                if (token.Kind != kind) return token;
+            throw new Exception("NeverGetsHereException");
+        }
+
+        protected int PeekToken(SyntaxKind kind, out SyntaxToken feede_)
+        {
+            for (var index = 0; (feede_ = this.PeekToken(index)) is SyntaxToken and not null; index++)
+                if (feede_.Kind != kind) return index;
+            throw new Exception("NeverGetsHereException");
+        }
+
+
         protected bool EatToken(out SyntaxToken token)
         {
             token = EatToken();
