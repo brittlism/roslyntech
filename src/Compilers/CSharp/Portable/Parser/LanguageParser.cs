@@ -16,7 +16,6 @@ using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Text;
 
-
 namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 {
     using Microsoft.CodeAnalysis.Syntax.InternalSyntax;
@@ -4705,7 +4704,7 @@ parse_member_name:;
             TypeSyntax type,
             ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt,
             SyntaxToken identifier,
-            TypeParameterListSyntax typeParameterList, bool initOrSet)
+            TypeParameterListSyntax typeParameterList)
         {
             if (typeParameterList != null)
             {
@@ -4726,7 +4725,6 @@ parse_member_name:;
                 var value = this.ParseVariableInitializer();
                 initializer = _syntaxFactory.EqualsValueClause(equals, value: value);
             }
-
 
             return _syntaxFactory.PropertyDeclaration(
                 attributes, modifiers.ToList(), type, explicitInterfaceOpt, identifier,

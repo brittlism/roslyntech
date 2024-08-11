@@ -495,7 +495,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             throw new Exception("NeverGetsHereException");
         }
 
-
         protected bool EatToken(out SyntaxToken token)
         {
             token = EatToken();
