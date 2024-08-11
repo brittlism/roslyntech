@@ -8,10 +8,14 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
+
+using Roslyn.Utilities;
+
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Text;
-using Roslyn.Utilities;
+
 
 namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 {
@@ -358,6 +362,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 case SyntaxKind.SealedKeyword:
                 case SyntaxKind.StaticKeyword:
                 case SyntaxKind.UnsafeKeyword:
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
                     return true;
                 default:
                     return false;
@@ -1279,12 +1287,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             {
                 case SyntaxKind.PublicKeyword:
                     return DeclarationModifiers.Public;
+                case SyntaxKind.PrivateKeyword:
+                    return DeclarationModifiers.Private;
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                    return DeclarationModifiers.ProtectedInternal;
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
+                    return DeclarationModifiers.PrivateProtected;
                 case SyntaxKind.InternalKeyword:
                     return DeclarationModifiers.Internal;
                 case SyntaxKind.ProtectedKeyword:
                     return DeclarationModifiers.Protected;
-                case SyntaxKind.PrivateKeyword:
-                    return DeclarationModifiers.Private;
                 case SyntaxKind.SealedKeyword:
                     return DeclarationModifiers.Sealed;
                 case SyntaxKind.AbstractKeyword:
@@ -1329,13 +1343,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     return DeclarationModifiers.None;
             }
         }
+        private void ParseModifiers(SyntaxListBuilder tokens, bool forTopLevelStatements)
+            => ParseModifiers(tokens, forTopLevelStatements, out _, out _, true);
 
-        private void ParseModifiers(SyntaxListBuilder tokens, bool forAccessors, bool forTopLevelStatements, out bool isPossibleTypeDeclaration)
+        private void ParseModifiers(SyntaxListBuilder tokens, bool forTopLevelStatements, out bool isPossibleTypeDeclaration, out SyntaxToken accessorAccessibilityModifier, bool forAccessors = false)
         {
             Debug.Assert(!(forAccessors && forTopLevelStatements));
-
+accessorAccessibilityModifier = null;
             isPossibleTypeDeclaration = true;
-
+            
             while (true)
             {
                 var newMod = GetModifierExcludingScoped(this.CurrentToken);
@@ -1355,6 +1371,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     }
 
                     break;
+                }
+                else if ( (newMod & DeclarationModifiers.AccessibilityMask) != 0)
+                {
+                    var NextToken = this.PeekToken(1);
+                    if (GetModifierExcludingScoped(NextToken) != DeclarationModifiers.None)
+                    {
+                        if (GetModifierExcludingScoped(this.PeekToken(2)) == DeclarationModifiers.None)
+                        {
+                            tokens.Add(SyntaxFactory.MergeTokens(this.EatToken(), NextToken = this.EatToken()));
+                            accessorAccessibilityModifier = NextToken;// = this.EatToken();
+                            continue;
+                        }
+                    }
                 }
 
                 SyntaxToken modTok;
@@ -2281,6 +2310,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 case SyntaxKind.ExplicitKeyword:
                 case SyntaxKind.OpenParenToken:    //tuple
                 case SyntaxKind.RefKeyword:
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
                     return true;
 
                 default:
@@ -2476,8 +2509,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 }
 
                 // All modifiers that might start an expression are processed above.
-                bool isPossibleTypeDeclaration;
-                this.ParseModifiers(modifiers, forAccessors: false, forTopLevelStatements: true, out isPossibleTypeDeclaration);
+                this.ParseModifiers(modifiers, forTopLevelStatements: true,
+                    out bool isPossibleTypeDeclaration, out var accessorAccessibilityModifier);
                 bool haveModifiers = (modifiers.Count > 0);
                 MemberDeclarationSyntax result;
 
@@ -2508,7 +2541,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                         // Prefers const field over const local variable decl
                         return ParseConstantFieldDeclaration(attributes, modifiers, parentKind);
                     case SyntaxKind.EventKeyword:
-                        return this.ParseEventDeclaration(attributes, modifiers, parentKind);
+                        return this.ParseEventDeclaration(attributes, modifiers, accessorAccessibilityModifier, parentKind);
                     case SyntaxKind.FixedKeyword:
                         return this.ParseFixedSizeBufferDeclaration(attributes, modifiers, parentKind);
                     
@@ -2954,7 +2987,8 @@ parse_member_name:;
             {
                 var attributes = this.ParseAttributeDeclarations(false);
 
-                this.ParseModifiers(modifiers, false, false, out bool isPossibleTypeDeclaration);
+                this.ParseModifiers(modifiers, forTopLevelStatements: false, 
+                    out bool isPossibleTypeDeclaration, out var accessorAccessibilityModifier);
 
                 switch (this.CurrentToken.Kind)
                 {
@@ -2967,7 +3001,7 @@ parse_member_name:;
                     case SyntaxKind.ConstKeyword:
                         return this.ParseConstantFieldDeclaration(attributes, modifiers, parentKind);
                     case SyntaxKind.EventKeyword:
-                        return this.ParseEventDeclaration(attributes, modifiers, parentKind);
+                        return this.ParseEventDeclaration(attributes, modifiers, accessorAccessibilityModifier, parentKind);
                     case SyntaxKind.FixedKeyword:
                         return this.ParseFixedSizeBufferDeclaration(attributes, modifiers, parentKind);
                 }
@@ -2975,17 +3009,13 @@ parse_member_name:;
                 // Check for conversion operators (implicit/explicit)
                 MemberDeclarationSyntax result = this.TryParseConversionOperatorDeclaration(attributes, modifiers);
                 if (result is not null)
-                {
                     return result;
-                }
 
                 // Namespaces should be handled by the caller, not checking for them
 
                 // It's valid to have a type declaration here -- check for those
                 if (isPossibleTypeDeclaration && IsTypeDeclarationStart())
-                {
                     return this.ParseTypeDeclaration(attributes, modifiers);
-                }
 
                 // Everything that's left -- methods, fields, properties, 
                 // indexers, and non-conversion operators -- starts with a type 
@@ -2999,28 +3029,19 @@ parse_member_name:;
                     // Check for misplaced modifiers.  if we see any, then consider this member
                     // terminated and restart parsing.
                     if (IsMisplacedModifier(modifiers, attributes, type, out result))
-                    {
                         return result;
-                    }
 
 parse_member_name:;
                     ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt;
 
                     // If we've seen the ref keyword, we know we must have an indexer, method, field, or property.
                     if (type.Kind != SyntaxKind.RefType)
-                    {
-                        // Check here for operators
-                        // Allow old-style implicit/explicit casting operator syntax, just so we can give a better error
+                        // Check here for operators. Allow old-style implicit/explicit casting operator syntax, just so we can give a better error.
                         if (IsOperatorStart(out explicitInterfaceOpt))
-                        {
                             return this.ParseOperatorDeclaration(attributes, modifiers, type, explicitInterfaceOpt);
-                        }
-                    }
 
                     if (IsFieldDeclaration(isEvent: false, isGlobalScriptLevel: false))
-                    {
                         return this.ParseNormalFieldDeclaration(attributes, modifiers, type, parentKind);
-                    }
 
                     // At this point we can either have indexers, methods, or 
                     // properties (or something unknown).  Try to break apart
@@ -3032,9 +3053,7 @@ parse_member_name:;
                     // First, check if we got absolutely nothing.  If so, then 
                     // We need to consume a bad member and try again.
                     if (IsNoneOrIncompleteMember(parentKind, attributes, modifiers, type, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt, out result))
-                    {
                         return result;
-                    }
 
                     // If the modifiers did not include "async", and the type we got was "async", and there was an
                     // error in the identifier or its type parameters, then the user is probably in the midst of typing
@@ -3045,16 +3064,12 @@ parse_member_name:;
                     //     async Task<
                     // then we want async to be a modifier and Task<MISSING> to be a type.
                     if (ReconsideredTypeAsAsyncModifier(ref modifiers, ref type, ref afterTypeResetPoint, ref explicitInterfaceOpt, ref identifierOrThisOpt, ref typeParameterListOpt))
-                    {
                         goto parse_member_name;
-                    }
 
                     Debug.Assert(identifierOrThisOpt != null);
 
                     if (TryParseIndexerOrPropertyDeclaration(attributes, modifiers, type, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt, out result))
-                    {
                         return result;
-                    }
 
                     // treat anything else as a method.
                     return this.ParseMethodDeclaration(attributes, modifiers, type, explicitInterfaceOpt, identifierOrThisOpt, typeParameterListOpt);
@@ -4191,7 +4206,7 @@ parse_member_name:;
             var accMods = _pool.Allocate();
 
             var accAttrs = this.ParseAttributeDeclarations(inExpressionContext: false);
-            this.ParseModifiers(accMods, forAccessors: true, forTopLevelStatements: false, isPossibleTypeDeclaration: out _);
+            this.ParseModifiers(accMods, forTopLevelStatements: false, out _, out var accessorAccessibilityModifier);
 
             var accessorName = this.EatToken(SyntaxKind.IdentifierToken,
                 isEvent ? ErrorCode.ERR_AddOrRemoveExpected : ErrorCode.ERR_GetOrSetExpected);
@@ -4662,9 +4677,66 @@ parse_member_name:;
                 this.EatToken(SyntaxKind.SemicolonToken));
         }
 
-        private MemberDeclarationSyntax ParseEventDeclaration(
+        private AccessorListSyntax GetAccessorsTemporary(SyntaxToken AccessibilityForGet)
+        {
+            bool initOrSet = AccessibilityForGet.Kind == SyntaxKind.InitKeyword || GetModifierExcludingScoped(AccessibilityForGet) != DeclarationModifiers.None;
+
+            SyntaxList<SyntaxToken> setAcessorAcessibilities = new();
+            setAcessorAcessibilities = (new SyntaxListBuilder<SyntaxToken>()).Add(AccessibilityForGet).ToList();
+
+            var getAccessor = _syntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration, new(), new(),
+                                SyntaxFactory.MissingToken(SyntaxKind.GetKeyword), null, null, SyntaxFactory.MissingToken(SyntaxKind.SemicolonToken));
+            var setAccessor = _syntaxFactory.AccessorDeclaration(initOrSet ? SyntaxKind.InitAccessorDeclaration : SyntaxKind.SetAccessorDeclaration, new(), setAcessorAcessibilities,
+                                initOrSet ? SyntaxFactory.MissingToken(SyntaxKind.InitKeyword) : SyntaxFactory.MissingToken(SyntaxKind.SetKeyword), null, null, SyntaxFactory.MissingToken(SyntaxKind.SemicolonToken));
+
+            var accessorListBuilder = new SyntaxListBuilder<AccessorDeclarationSyntax>(2);
+            accessorListBuilder.Add(getAccessor);
+            accessorListBuilder.Add(setAccessor);
+
+            return _syntaxFactory.AccessorList(
+                    SyntaxFactory.MissingToken(SyntaxKind.OpenBraceToken),
+                    accessorListBuilder.ToList(),
+                    SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken));
+        }
+        
+        private PropertyDeclarationSyntax ParsePropertyField(
             SyntaxList<AttributeListSyntax> attributes,
             SyntaxListBuilder modifiers,
+            TypeSyntax type,
+            ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt,
+            SyntaxToken identifier,
+            TypeParameterListSyntax typeParameterList, bool initOrSet)
+        {
+            if (typeParameterList != null)
+            {
+                identifier = AddTrailingSkippedSyntax(identifier, typeParameterList);
+                identifier = this.AddError(identifier, ErrorCode.ERR_UnexpectedGenericName);
+            }
+
+            EqualsValueClauseSyntax initializer = null;
+            // Check for expression body
+            if (this.CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken)
+            {
+                Debug.Assert(false);
+            }
+            // Check if we have an initializer
+            else if (this.CurrentToken.Kind == SyntaxKind.EqualsToken)
+            {
+                var equals = this.EatToken(SyntaxKind.EqualsToken);
+                var value = this.ParseVariableInitializer();
+                initializer = _syntaxFactory.EqualsValueClause(equals, value: value);
+            }
+
+
+            return _syntaxFactory.PropertyDeclaration(
+                attributes, modifiers.ToList(), type, explicitInterfaceOpt, identifier,
+                GetAccessorsTemporary(SyntaxFactory.MissingToken(SyntaxKind.InitKeyword)), 
+                null, initializer, this.EatToken(SyntaxKind.SemicolonToken));
+        }
+
+        private MemberDeclarationSyntax ParseEventDeclaration(
+            SyntaxList<AttributeListSyntax> attributes,
+            SyntaxListBuilder modifiers, SyntaxToken accessorAccessibilityModifier,
             SyntaxKind parentKind)
         {
             Debug.Assert(this.CurrentToken.Kind == SyntaxKind.EventKeyword);
@@ -4672,112 +4744,104 @@ parse_member_name:;
             var eventToken = this.EatToken();
             var type = this.ParseType();
 
-            return IsFieldDeclaration(isEvent: true, isGlobalScriptLevel: parentKind == SyntaxKind.CompilationUnit)
-                ? this.ParseEventFieldDeclaration(attributes, modifiers, eventToken, type, parentKind)
-                : this.ParseEventDeclarationWithAccessors(attributes, modifiers, eventToken, type);
-        }
-
-        private EventDeclarationSyntax ParseEventDeclarationWithAccessors(
-            SyntaxList<AttributeListSyntax> attributes,
-            SyntaxListBuilder modifiers,
-            SyntaxToken eventToken,
-            TypeSyntax type)
-        {
-            ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt;
-            SyntaxToken identifierOrThisOpt;
-            TypeParameterListSyntax typeParameterList;
-
-            this.ParseMemberName(out explicitInterfaceOpt, out identifierOrThisOpt, out typeParameterList, isEvent: true);
-
-            // If we got an explicitInterfaceOpt but not an identifier, then we're in the special
-            // case for ERR_ExplicitEventFieldImpl (see ParseMemberName for details).
-            if (explicitInterfaceOpt != null && this.CurrentToken.Kind is not SyntaxKind.OpenBraceToken and not SyntaxKind.SemicolonToken)
+            if (accessorAccessibilityModifier is null && IsFieldDeclaration(isEvent: true, isGlobalScriptLevel: parentKind == SyntaxKind.CompilationUnit))
             {
-                Debug.Assert(typeParameterList == null, "Exit condition of ParseMemberName in this scenario");
-                return _syntaxFactory.EventDeclaration(
+                var variables = this.ParseFieldDeclarationVariableDeclarators(type, flags: 0, parentKind);
+                if (this.CurrentToken.Kind == SyntaxKind.DotToken)
+                {
+                    // Better error message for confusing event situation.
+                    eventToken = this.AddError(eventToken, ErrorCode.ERR_ExplicitEventFieldImpl);
+                }
+                return _syntaxFactory.EventFieldDeclaration(
+                    attributes,
+                    modifiers.ToList(),
+                    eventToken,
+                    _syntaxFactory.VariableDeclaration(type, variables),
+                    this.EatToken(SyntaxKind.SemicolonToken));
+            }
+            else
+            {
+                ExplicitInterfaceSpecifierSyntax explicitInterfaceOpt;
+                SyntaxToken identifierOrThisOpt;
+                TypeParameterListSyntax typeParameterList;
+
+                this.ParseMemberName(out explicitInterfaceOpt, out identifierOrThisOpt, out typeParameterList, isEvent: true);
+
+                // If we got an explicitInterfaceOpt but not an identifier, then we're in the special
+                // case for ERR_ExplicitEventFieldImpl (see ParseMemberName for details).
+                if (explicitInterfaceOpt != null && this.CurrentToken.Kind is not SyntaxKind.OpenBraceToken and not SyntaxKind.SemicolonToken)
+                {
+                    Debug.Assert(typeParameterList == null, "Exit condition of ParseMemberName in this scenario");
+                    return _syntaxFactory.EventDeclaration(
+                        attributes,
+                        modifiers.ToList(),
+                        eventToken,
+                        type,
+                        //already has an appropriate error attached
+                        explicitInterfaceOpt,
+                        // No need for a diagnostic, ParseMemberName has already added one.
+                        identifierOrThisOpt == null ? CreateMissingIdentifierToken() : identifierOrThisOpt,
+                        _syntaxFactory.AccessorList(
+                            SyntaxFactory.MissingToken(SyntaxKind.OpenBraceToken),
+                            default(SyntaxList<AccessorDeclarationSyntax>),
+                            SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken)),
+                        semicolonToken: null);
+                }
+
+                SyntaxToken identifier;
+
+                if (identifierOrThisOpt == null)
+                {
+                    identifier = CreateMissingIdentifierToken();
+                }
+                else if (identifierOrThisOpt.Kind != SyntaxKind.IdentifierToken)
+                {
+                    Debug.Assert(identifierOrThisOpt.Kind == SyntaxKind.ThisKeyword);
+                    identifier = ConvertToMissingWithTrailingTrivia(identifierOrThisOpt, SyntaxKind.IdentifierToken);
+                }
+                else
+                {
+                    identifier = identifierOrThisOpt;
+                }
+
+                Debug.Assert(identifier != null);
+                Debug.Assert(identifier.Kind == SyntaxKind.IdentifierToken);
+
+                if (identifier.IsMissing && !type.IsMissing)
+                {
+                    identifier = this.AddError(identifier, ErrorCode.ERR_IdentifierExpected);
+                }
+
+                if (typeParameterList != null) // check to see if the user tried to create a generic event.
+                {
+                    identifier = AddTrailingSkippedSyntax(identifier, typeParameterList);
+                    identifier = this.AddError(identifier, ErrorCode.ERR_UnexpectedGenericName);
+                }
+
+                AccessorListSyntax accessorList = null;
+                SyntaxToken semicolon = this.PeekToken(1).Kind == SyntaxKind.OpenBraceToken ? null : this.TryEatToken(SyntaxKind.SemicolonToken);
+
+                if (accessorAccessibilityModifier is not null)
+                {
+                    accessorList = this.GetAccessorsTemporary(accessorAccessibilityModifier);
+                }
+                else if (explicitInterfaceOpt == null && semicolon == null)
+                {
+                    accessorList = this.ParseAccessorList(isEvent: true);
+                }
+
+                var decl = _syntaxFactory.EventDeclaration(
                     attributes,
                     modifiers.ToList(),
                     eventToken,
                     type,
-                    //already has an appropriate error attached
                     explicitInterfaceOpt,
-                    // No need for a diagnostic, ParseMemberName has already added one.
-                    identifierOrThisOpt == null ? CreateMissingIdentifierToken() : identifierOrThisOpt,
-                    _syntaxFactory.AccessorList(
-                        SyntaxFactory.MissingToken(SyntaxKind.OpenBraceToken),
-                        default(SyntaxList<AccessorDeclarationSyntax>),
-                        SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken)),
-                    semicolonToken: null);
+                    identifier,
+                    accessorList,
+                    semicolon);
+
+                return decl;
             }
-
-            SyntaxToken identifier;
-
-            if (identifierOrThisOpt == null)
-            {
-                identifier = CreateMissingIdentifierToken();
-            }
-            else if (identifierOrThisOpt.Kind != SyntaxKind.IdentifierToken)
-            {
-                Debug.Assert(identifierOrThisOpt.Kind == SyntaxKind.ThisKeyword);
-                identifier = ConvertToMissingWithTrailingTrivia(identifierOrThisOpt, SyntaxKind.IdentifierToken);
-            }
-            else
-            {
-                identifier = identifierOrThisOpt;
-            }
-
-            Debug.Assert(identifier != null);
-            Debug.Assert(identifier.Kind == SyntaxKind.IdentifierToken);
-
-            if (identifier.IsMissing && !type.IsMissing)
-            {
-                identifier = this.AddError(identifier, ErrorCode.ERR_IdentifierExpected);
-            }
-
-            if (typeParameterList != null) // check to see if the user tried to create a generic event.
-            {
-                identifier = AddTrailingSkippedSyntax(identifier, typeParameterList);
-                identifier = this.AddError(identifier, ErrorCode.ERR_UnexpectedGenericName);
-            }
-
-            AccessorListSyntax accessorList = null;
-            SyntaxToken semicolon = null;
-
-            if (explicitInterfaceOpt != null && this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon = this.EatToken(SyntaxKind.SemicolonToken);
-            }
-            else
-            {
-                accessorList = this.ParseAccessorList(isEvent: true);
-            }
-
-            var decl = _syntaxFactory.EventDeclaration(
-                attributes,
-                modifiers.ToList(),
-                eventToken,
-                type,
-                explicitInterfaceOpt,
-                identifier,
-                accessorList,
-                semicolon);
-
-            decl = EatUnexpectedTrailingSemicolon(decl);
-
-            return decl;
-        }
-
-        private TNode EatUnexpectedTrailingSemicolon<TNode>(TNode decl) where TNode : CSharpSyntaxNode
-        {
-            // allow for case of one unexpected semicolon...
-            if (this.CurrentToken.Kind == SyntaxKind.SemicolonToken)
-            {
-                var semi = this.EatToken();
-                semi = this.AddError(semi, ErrorCode.ERR_UnexpectedSemicolon);
-                decl = AddTrailingSkippedSyntax(decl, semi);
-            }
-
-            return decl;
         }
 
         private FieldDeclarationSyntax ParseNormalFieldDeclaration(
@@ -4798,41 +4862,6 @@ parse_member_name:;
             return _syntaxFactory.FieldDeclaration(
                 attributes,
                 modifiers.ToList(),
-                _syntaxFactory.VariableDeclaration(type, variables),
-                this.EatToken(SyntaxKind.SemicolonToken));
-        }
-
-        private EventFieldDeclarationSyntax ParseEventFieldDeclaration(
-            SyntaxList<AttributeListSyntax> attributes,
-            SyntaxListBuilder modifiers,
-            SyntaxToken eventToken,
-            TypeSyntax type,
-            SyntaxKind parentKind)
-        {
-            // An attribute specified on an event declaration that omits event accessors can apply
-            // to the event being declared, to the associated field (if the event is not abstract),
-            // or to the associated add and remove methods. In the absence of an
-            // attribute-target-specifier, the attribute applies to the event. The presence of the
-            // event attribute-target-specifier indicates that the attribute applies to the event;
-            // the presence of the field attribute-target-specifier indicates that the attribute
-            // applies to the field; and the presence of the method attribute-target-specifier
-            // indicates that the attribute applies to the methods.
-            //
-            // NOTE(cyrusn): We allow more than the above here.  Specifically, even if the event is
-            // abstract, we allow the attribute to specify that it belongs to a field.  Later, in the
-            // semantic pass, we will disallow this.
-
-            var variables = this.ParseFieldDeclarationVariableDeclarators(type, flags: 0, parentKind);
-            if (this.CurrentToken.Kind == SyntaxKind.DotToken)
-            {
-                // Better error message for confusing event situation.
-                eventToken = this.AddError(eventToken, ErrorCode.ERR_ExplicitEventFieldImpl);
-            }
-
-            return _syntaxFactory.EventFieldDeclaration(
-                attributes,
-                modifiers.ToList(),
-                eventToken,
                 _syntaxFactory.VariableDeclaration(type, variables),
                 this.EatToken(SyntaxKind.SemicolonToken));
         }
@@ -10076,12 +10105,16 @@ done:;
                 case SyntaxKind.AsyncKeyword:
                 case SyntaxKind.UnsafeKeyword:
                 case SyntaxKind.ExternKeyword:
-                // Not a valid modifier, but we should parse to give a good
-                // error message
+                // Not a valid modifier, but we should parse to give a good error message
                 case SyntaxKind.PublicKeyword:
                 case SyntaxKind.InternalKeyword:
                 case SyntaxKind.ProtectedKeyword:
                 case SyntaxKind.PrivateKeyword:
+
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
                     return true;
 
                 default:
@@ -10096,9 +10129,13 @@ done:;
                 // Accessibility modifiers aren't legal in a local function,
                 // but a common mistake. Parse to give a better error message.
                 case SyntaxKind.PublicKeyword:
+                case SyntaxKind.PrivateKeyword:
                 case SyntaxKind.InternalKeyword:
                 case SyntaxKind.ProtectedKeyword:
-                case SyntaxKind.PrivateKeyword:
+                case SyntaxKind.ProtectedInternal:
+                case SyntaxKind.ProtectedInternalKeyword:
+                case SyntaxKind.PrivateProtected:
+                case SyntaxKind.PrivateProtectedKeyword:
                     return true;
 
                 default:
@@ -11344,7 +11381,7 @@ done:;
 
                         var dotToken = this.EatToken();
                         var ex = NoTriviaBetween(dotToken, this.CurrentToken) ? this.TryEatToken(SyntaxKind.ExclamationToken) : null;
-                        var syntaxToken = ex is null ? dotToken : SyntaxFactory.MergeTokens(SyntaxKind.DotExcalamationToken, dotToken, ex);
+                        var syntaxToken = ex is null ? dotToken : SyntaxFactory.MergeToken(SyntaxKind.DotExcalamationToken, dotToken, ex);
 
                         if (syntaxToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia) &&
                             this.PeekToken(1).Kind == SyntaxKind.IdentifierToken && this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
