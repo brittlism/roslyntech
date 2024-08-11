@@ -146,8 +146,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public static SyntaxToken MergeTokens(SyntaxToken first, SyntaxToken second)
         {
             return Token(first.GetLeadingTrivia(), first.Kind, 
-                first.Text + first.TrailingTrivia + second.LeadingTrivia + second.Text, 
-                first.ValueText + first.TrailingTrivia + second.LeadingTrivia + second.ValueText, second.GetTrailingTrivia());
+                first.Text + first.GetTrailingTrivia().GetValueText() + second.GetLeadingTrivia().GetValueText() + second.Text, 
+                first.ValueText + first.GetTrailingTrivia().GetValueText() + second.GetLeadingTrivia().GetValueText() + second.ValueText, second.GetTrailingTrivia());
         }
         internal static SyntaxToken MissingToken(SyntaxKind kind)
         {
@@ -382,7 +382,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         /// may need to be reinterpreted as query keywords.
         /// </summary>
         internal bool IsInQuery;
-
 
         /// <summary>
         /// Should only be called during construction.
