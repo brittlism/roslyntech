@@ -79,6 +79,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         DotExcalamationToken = 8223,
 
+        ExclamationMarkParenthesisOpenToken = 8224,
+
         // Values ranging from 8193 (TildeToken) to 8287 (GreaterThanGreaterThanGreaterThanEqualsToken) are reserved for punctuation kinds.
         // This gap is included within that range. So if you add a value here make sure `SyntaxFacts.GetPunctuationKinds` includes it in the returned enumeration
 
