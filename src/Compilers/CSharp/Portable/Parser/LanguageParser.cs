@@ -5565,8 +5565,7 @@ parse_member_name:;
 
         private SyntaxToken ParseIdentifierToken(ErrorCode code = ErrorCode.ERR_IdentifierExpected)
         {
-            var ctk = this.CurrentToken.Kind;
-            if (ctk == SyntaxKind.IdentifierToken)
+            if (this.CurrentToken.Kind == SyntaxKind.IdentifierToken)
             {
                 // Error tolerance for IntelliSense. Consider the following case: [EditorBrowsable( partial class Goo {
                 // } Because we're parsing an attribute argument we'll end up consuming the "partial" identifier and
