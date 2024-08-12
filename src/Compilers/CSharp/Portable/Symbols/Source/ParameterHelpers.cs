@@ -95,11 +95,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         _ => ImmutableArray<CustomModifier>.Empty
                     };
 
-                    if (parameterType.IsVoidType())
-                    {
-                        diagnostics.Add(ErrorCode.ERR_NoVoidParameter, syntax.Type.Location);
-                    }
-
                     return new FunctionPointerParameterSymbol(
                         parameterType,
                         refKind,
