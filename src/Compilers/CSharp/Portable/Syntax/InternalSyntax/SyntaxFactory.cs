@@ -145,7 +145,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         public static SyntaxToken MergeTokens(SyntaxToken first, SyntaxToken second)
         {
-            var Trivia = first.TrailingTrivia.Text + second.LeadingTrivia.Text;
+            var Trivia = first.TrailingTrivia?.Text + second.LeadingTrivia?.Text;
             var token = Token(first.GetLeadingTrivia(), first.Kind,
                 first.Text + Trivia + second.Text,
                 first.ValueText + Trivia + second.ValueText, second.GetTrailingTrivia());
