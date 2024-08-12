@@ -1012,7 +1012,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 or ErrorCode.ERR_ComImportWithUserCtor
                 or ErrorCode.ERR_FieldCantHaveVoidType
                 or ErrorCode.WRN_NonObsoleteOverridingObsolete
-                or ErrorCode.ERR_SystemVoid
                 or ErrorCode.ERR_ExplicitParamArrayOrCollection
                 or ErrorCode.WRN_BitwiseOrSignExtend
                 or ErrorCode.ERR_VolatileStruct
@@ -1206,7 +1205,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 or ErrorCode.ERR_UsingAfterElements
                 or ErrorCode.ERR_BadBinOpArgs
                 or ErrorCode.ERR_BadUnOpArgs
-                or ErrorCode.ERR_NoVoidParameter
                 or ErrorCode.ERR_DuplicateAlias
                 or ErrorCode.ERR_BadProtectedAccess
                 or ErrorCode.ERR_AddModuleAssembly
