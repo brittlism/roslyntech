@@ -36,8 +36,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         // NOTE: If you add new state, you should probably add it to ResetPoint as well.
 
-        internal LanguageParser(
-            Lexer lexer,
+        internal LanguageParser(Lexer lexer,
             CSharp.CSharpSyntaxNode? oldTree,
             IEnumerable<TextChangeRange>? changes,
             LexerMode lexerMode = LexerMode.Syntax,
