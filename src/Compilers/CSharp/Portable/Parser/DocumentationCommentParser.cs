@@ -85,7 +85,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                 var eoc = this.EatToken(SyntaxKind.EndOfDocumentationCommentToken);
 
-                isTerminated = !_isDelimited || (eoc.LeadingTrivia.Count > 0 && eoc.LeadingTrivia[eoc.LeadingTrivia.Count - 1].ToString() == "*/");
+                isTerminated = !_isDelimited || (eoc.LeadingTrivias.Count > 0 && eoc.LeadingTrivias[eoc.LeadingTrivias.Count - 1].ToString() == "*/");
                 SyntaxKind kind = _isDelimited ? SyntaxKind.MultiLineDocumentationCommentTrivia : SyntaxKind.SingleLineDocumentationCommentTrivia;
 
                 return SyntaxFactory.DocumentationCommentTrivia(kind, nodes.ToList(), eoc);

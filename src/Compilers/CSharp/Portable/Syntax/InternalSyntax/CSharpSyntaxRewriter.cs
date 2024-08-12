@@ -20,17 +20,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         public override CSharpSyntaxNode VisitToken(SyntaxToken token)
         {
-            var leading = this.VisitList(token.LeadingTrivia);
-            var trailing = this.VisitList(token.TrailingTrivia);
+            var leading = this.VisitList(token.LeadingTrivias);
+            var trailing = this.VisitList(token.TrailingTrivias);
 
-            if (leading != token.LeadingTrivia || trailing != token.TrailingTrivia)
+            if (leading != token.LeadingTrivias || trailing != token.TrailingTrivias)
             {
-                if (leading != token.LeadingTrivia)
+                if (leading != token.LeadingTrivias)
                 {
                     token = token.TokenWithLeadingTrivia(leading.Node);
                 }
 
-                if (trailing != token.TrailingTrivia)
+                if (trailing != token.TrailingTrivias)
                 {
                     token = token.TokenWithTrailingTrivia(trailing.Node);
                 }

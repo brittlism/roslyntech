@@ -3480,7 +3480,7 @@ parse_member_name:;
                 SyntaxToken opKeyword;
                 TypeSyntax type;
 
-                if (!style.IsMissing && explicitInterfaceOpt is not null && this.CurrentToken.Kind != SyntaxKind.OperatorKeyword && style.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia))
+                if (!style.IsMissing && explicitInterfaceOpt is not null && this.CurrentToken.Kind != SyntaxKind.OperatorKeyword && style.TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia))
                 {
                     // Not likely an explicit interface implementation. Likely a beginning of the next member on the next line.
                     this.Reset(ref point);
@@ -5116,7 +5116,7 @@ parse_member_name:;
                 var currentTokenKind = this.CurrentToken.Kind;
                 if (currentTokenKind == SyntaxKind.IdentifierToken && !parentType.IsMissing)
                 {
-                    var isAfterNewLine = parentType.GetLastToken().TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia);
+                    var isAfterNewLine = parentType.GetLastToken().TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia);
                     if (isAfterNewLine)
                     {
                         int offset, width;
@@ -6377,7 +6377,7 @@ parse_member_name:;
                             explicitInterfaceName,
                             AddError(separator, ErrorCode.ERR_ExplicitEventFieldImpl));
 
-                        if (separator.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia))
+                        if (separator.TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia))
                         {
                             Debug.Assert(beforeIdentifierPointSet);
                             Reset(ref beforeIdentifierPoint);
@@ -6629,9 +6629,9 @@ parse_member_name:;
         {
             Debug.Assert(separator.Kind == SyntaxKind.DotDotToken);
 
-            var leftDot = SyntaxFactory.Token(separator.LeadingTrivia.Node, SyntaxKind.DotToken, null);
+            var leftDot = SyntaxFactory.Token(separator.LeadingTrivias.Node, SyntaxKind.DotToken, null);
             var missingName = this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected);
-            separator = SyntaxFactory.Token(null, SyntaxKind.DotToken, separator.TrailingTrivia.Node);
+            separator = SyntaxFactory.Token(null, SyntaxKind.DotToken, separator.TrailingTrivias.Node);
             return _syntaxFactory.QualifiedName(left, leftDot, missingName);
         }
 
@@ -8065,7 +8065,7 @@ done:;
             {
                 var token1 = PeekToken(1);
                 if (token1.Kind == SyntaxKind.DotToken &&
-                    token1.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia))
+                    token1.TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia))
                 {
                     if (PeekToken(2).Kind == SyntaxKind.IdentifierToken &&
                         PeekToken(3).Kind == SyntaxKind.IdentifierToken)
@@ -9130,7 +9130,7 @@ done:;
                             // revert the identifier from its contextual underscore back to an identifier.
                             var discard = ((DiscardDesignationSyntax)decl.designation).underscoreToken;
                             Debug.Assert(discard.Kind == SyntaxKind.UnderscoreToken);
-                            identifier = SyntaxToken.WithValue(SyntaxKind.IdentifierToken, discard.LeadingTrivia.Node, discard.Text, discard.ValueText, discard.TrailingTrivia.Node);
+                            identifier = SyntaxToken.WithValue(SyntaxKind.IdentifierToken, discard.LeadingTrivias.Node, discard.Text, discard.ValueText, discard.TrailingTrivias.Node);
                             break;
                         default:
                             throw ExceptionUtilities.UnexpectedValue(decl.designation.Kind);
@@ -11380,7 +11380,7 @@ done:;
                         var ex = NoTriviaBetween(dotToken, this.CurrentToken) ? this.TryEatToken(SyntaxKind.ExclamationToken) : null;
                         var syntaxToken = ex is null ? dotToken : SyntaxFactory.MergeToken(SyntaxKind.DotExcalamationToken, dotToken, ex);
 
-                        if (syntaxToken.TrailingTrivia.Any((int)SyntaxKind.EndOfLineTrivia) &&
+                        if (syntaxToken.TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia) &&
                             this.PeekToken(1).Kind == SyntaxKind.IdentifierToken && this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
                                 return MemberAccessExpression(syntaxToken, this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
                         //add the ability for identifiers later (better call/invocations)

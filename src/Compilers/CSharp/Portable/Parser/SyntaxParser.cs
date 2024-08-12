@@ -787,7 +787,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                 width = 0;
                 bool seenSkipped = false;
-                foreach (var trivia in token.TrailingTrivia)
+                foreach (var trivia in token.TrailingTrivias)
                 {
                     if (trivia.Kind == SyntaxKind.SkippedTokensTrivia)
                     {
@@ -1087,8 +1087,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             if (token.Kind != token.ContextualKind)
             {
                 var kw = token.IsMissing
-                        ? SyntaxFactory.MissingToken(token.LeadingTrivia.Node, token.ContextualKind, token.TrailingTrivia.Node)
-                        : SyntaxFactory.Token(token.LeadingTrivia.Node, token.ContextualKind, token.TrailingTrivia.Node);
+                        ? SyntaxFactory.MissingToken(token.LeadingTrivias.Node, token.ContextualKind, token.TrailingTrivias.Node)
+                        : SyntaxFactory.Token(token.LeadingTrivias.Node, token.ContextualKind, token.TrailingTrivias.Node);
                 var d = token.GetDiagnostics();
                 if (d != null && d.Length > 0)
                 {
@@ -1105,7 +1105,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         {
             Debug.Assert(!token.IsMissing);
 
-            var identifier = SyntaxToken.Identifier(token.Kind, token.LeadingTrivia.Node, token.Text, token.ValueText, token.TrailingTrivia.Node);
+            var identifier = SyntaxToken.Identifier(token.Kind, token.LeadingTrivias.Node, token.Text, token.ValueText, token.TrailingTrivias.Node);
             if (token.ContainsDiagnostics)
                 identifier = identifier.WithDiagnosticsGreen(token.GetDiagnostics());
 

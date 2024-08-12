@@ -297,7 +297,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 // of the error message is leading trivia on the eod.
                 //
                 bool skipping = true;
-                foreach (var t in keyword.TrailingTrivia)
+                foreach (var t in keyword.TrailingTrivias)
                 {
                     if (skipping)
                     {
@@ -313,7 +313,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     triviaWidth += t.FullWidth;
                 }
 
-                foreach (var node in eod.LeadingTrivia)
+                foreach (var node in eod.LeadingTrivias)
                 {
                     node.WriteTo(triviaBuilder, leading: true, trailing: true);
                     triviaWidth += node.FullWidth;
