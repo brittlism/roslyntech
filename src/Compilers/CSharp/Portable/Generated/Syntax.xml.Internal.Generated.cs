@@ -20114,7 +20114,7 @@ internal partial class ContextAwareSyntax
     }
     public ArgumentListSyntax ArgumentList()
     {
-        return _syntaxFactory.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
+        return this.ArgumentList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
     }
 
     public ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, CoreSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken)
