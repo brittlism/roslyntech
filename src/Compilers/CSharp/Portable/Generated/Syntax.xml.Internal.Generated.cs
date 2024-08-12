@@ -20115,13 +20115,6 @@ internal partial class ContextAwareSyntax
 
     public ArgumentListSyntax ArgumentList(SyntaxToken openParenToken, CoreSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeParenToken)
     {
-#if DEBUG
-        if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-        if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
-        if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-        if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
-#endif
-
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.ArgumentList, openParenToken, arguments.Node, closeParenToken, this.context, out hash);
         if (cached != null) return (ArgumentListSyntax)cached;
@@ -20137,13 +20130,6 @@ internal partial class ContextAwareSyntax
 
     public BracketedArgumentListSyntax BracketedArgumentList(SyntaxToken openBracketToken, CoreSyntax.SeparatedSyntaxList<ArgumentSyntax> arguments, SyntaxToken closeBracketToken)
     {
-#if DEBUG
-        if (openBracketToken == null) throw new ArgumentNullException(nameof(openBracketToken));
-        if (openBracketToken.Kind != SyntaxKind.OpenBracketToken) throw new ArgumentException(nameof(openBracketToken));
-        if (closeBracketToken == null) throw new ArgumentNullException(nameof(closeBracketToken));
-        if (closeBracketToken.Kind != SyntaxKind.CloseBracketToken) throw new ArgumentException(nameof(closeBracketToken));
-#endif
-
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.BracketedArgumentList, openBracketToken, arguments.Node, closeBracketToken, this.context, out hash);
         if (cached != null) return (BracketedArgumentListSyntax)cached;
