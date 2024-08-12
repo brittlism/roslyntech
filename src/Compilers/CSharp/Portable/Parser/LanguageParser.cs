@@ -1341,8 +1341,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     return DeclarationModifiers.None;
             }
         }
-        private void ParseModifiers(SyntaxListBuilder tokens, bool forTopLevelStatements)
-            => ParseModifiers(tokens, forTopLevelStatements, out _, out _, true);
 
         private void ParseModifiers(SyntaxListBuilder tokens, bool forTopLevelStatements, out bool isPossibleTypeDeclaration, out SyntaxToken accessorAccessibilityModifier, bool forAccessors = false)
         {
@@ -5592,10 +5590,7 @@ parse_member_name:;
 
                 return identifierToken;
             }
-            else
-            {
-                return this.AddError(CreateMissingIdentifierToken(), code);
-            }
+            return this.AddError(CreateMissingIdentifierToken(), code);
         }
 
         private bool IsCurrentTokenQueryKeywordInQuery()
