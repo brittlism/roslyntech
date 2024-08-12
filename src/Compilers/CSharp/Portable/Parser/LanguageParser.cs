@@ -11314,7 +11314,7 @@ done:;
                 => _syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null,
                             _syntaxFactory.ParameterList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)),
                             SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), null,
-                                _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList(openToken)));
+                                _syntaxFactory.InvocationExpression(expr, openToken == null ? _syntaxFactory.ArgumentList() : this.ParseParenthesizedArgumentList(openToken)));
 
             Debug.Assert(expr != null);///
             while (true)
@@ -11389,9 +11389,7 @@ done:;
                             {
                                 (ExclToken_, NextToken_) = NextToken_.Kind == SyntaxKind.OpenParenToken ? (this.EatToken(), this.EatToken()) : (null, null);
                                 if (NextToken_ is not null)
-                                {
                                     syntaxToken = SyntaxFactory.MergeToken(SyntaxKind.ExclamationMarkParenthesisOpenToken, ExclToken_, NextToken_);
-                                }
                             }
                         }
                         else 
@@ -11399,13 +11397,17 @@ done:;
 
                         if (syntaxToken != null)
                         {
-                            expr = ParenthesizedLambdaExpression(syntaxToken ?? this.TryEatToken(SyntaxKind.OpenParenToken));
+                            if (ex == dotToken && syntaxToken.Kind == SyntaxKind.OpenParenToken)
+                                expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList());
+                            else
+                                expr = ParenthesizedLambdaExpression(syntaxToken ?? this.TryEatToken(SyntaxKind.OpenParenToken));
                         }
                         else if (ex != dotToken)
                         {
-                            expr = _syntaxFactory.InvocationExpression(expr,
-                                    _syntaxFactory.ArgumentList(
-                                        SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)));
+                            if (this.CurrentToken.Kind == SyntaxKind.ExclamationToken)
+                                expr = ParenthesizedLambdaExpression(null);
+                            else
+                                expr = _syntaxFactory.InvocationExpression(expr, _syntaxFactory.ArgumentList());
                         }
 
                         continue;
