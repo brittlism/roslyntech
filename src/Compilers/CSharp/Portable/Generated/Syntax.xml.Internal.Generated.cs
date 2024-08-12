@@ -21486,15 +21486,11 @@ internal partial class ContextAwareSyntax
 
         return result;
     }
+    public ExpressionStatementSyntax ExpressionStatement(ExpressionSyntax expression)
+        => this.ExpressionStatement(new(), expression, SyntaxFactory.MissingToken(SyntaxKind.SemicolonToken));
 
     public ExpressionStatementSyntax ExpressionStatement(CoreSyntax.SyntaxList<AttributeListSyntax> attributeLists, ExpressionSyntax expression, SyntaxToken semicolonToken)
     {
-#if DEBUG
-        if (expression == null) throw new ArgumentNullException(nameof(expression));
-        if (semicolonToken == null) throw new ArgumentNullException(nameof(semicolonToken));
-        if (semicolonToken.Kind != SyntaxKind.SemicolonToken) throw new ArgumentException(nameof(semicolonToken));
-#endif
-
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.ExpressionStatement, attributeLists.Node, expression, semicolonToken, this.context, out hash);
         if (cached != null) return (ExpressionStatementSyntax)cached;
@@ -23229,15 +23225,11 @@ internal partial class ContextAwareSyntax
         return new AccessorDeclarationSyntax(kind, attributeLists.Node, modifiers.Node, keyword, body, expressionBody, semicolonToken, context: this.context);
     }
 
+    public ParameterListSyntax ParameterList()
+        => this.ParameterList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken));
+
     public ParameterListSyntax ParameterList(SyntaxToken openParenToken, CoreSyntax.SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken)
     {
-#if DEBUG
-        if (openParenToken == null) throw new ArgumentNullException(nameof(openParenToken));
-        if (openParenToken.Kind != SyntaxKind.OpenParenToken) throw new ArgumentException(nameof(openParenToken));
-        if (closeParenToken == null) throw new ArgumentNullException(nameof(closeParenToken));
-        if (closeParenToken.Kind != SyntaxKind.CloseParenToken) throw new ArgumentException(nameof(closeParenToken));
-#endif
-
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.ParameterList, openParenToken, parameters.Node, closeParenToken, this.context, out hash);
         if (cached != null) return (ParameterListSyntax)cached;
