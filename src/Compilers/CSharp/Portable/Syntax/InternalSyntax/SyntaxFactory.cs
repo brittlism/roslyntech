@@ -140,15 +140,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public static SyntaxToken MergeToken(SyntaxKind kind, SyntaxToken first, SyntaxToken second)
         {
             Debug.Assert(LanguageParser.NoTriviaBetween(first, second));
-            return Token(first.GetLeadingTrivia(), kind, first.Text + second.Text, first.ValueText + second.ValueText, second.GetTrailingTrivia());
+            return Token(first.LeadingTrivias.Node!, kind, first.Text + second.Text, first.ValueText + second.ValueText, second.TrailingTrivias.Node!);
         }
 
         public static SyntaxToken MergeTokens(SyntaxToken first, SyntaxToken second)
         {
-            return Token(first.GetLeadingTrivia(), first.Kind, 
-                first.Text + first.GetTrailingTrivia().GetValueText() + second.GetLeadingTrivia().GetValueText() + second.Text, 
-                first.ValueText + first.GetTrailingTrivia().GetValueText() + second.GetLeadingTrivia().GetValueText() + second.ValueText, second.GetTrailingTrivia());
+            var Trivia = first.TrailingTrivia.Text + second.LeadingTrivia.Text;
+            var token = Token(first.GetLeadingTrivia(), first.Kind,
+                first.Text + Trivia + second.Text,
+                first.ValueText + Trivia + second.ValueText, second.GetTrailingTrivia());
+            return token;
         }
+
         internal static SyntaxToken MissingToken(SyntaxKind kind)
         {
             return SyntaxToken.CreateMissing(kind, null, null);
