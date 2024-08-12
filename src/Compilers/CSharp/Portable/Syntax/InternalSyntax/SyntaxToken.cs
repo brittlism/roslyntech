@@ -305,28 +305,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             var leading = this.GetLeadingTrivia();
             return leading != null ? leading.FullWidth : 0;
         }
-
         public override int GetTrailingTriviaWidth()
         {
             var trailing = this.GetTrailingTrivia();
             return trailing != null ? trailing.FullWidth : 0;
         }
 
-        internal SyntaxList<CSharpSyntaxNode> LeadingTrivia
-        {
-            get { return new SyntaxList<CSharpSyntaxNode>(this.GetLeadingTrivia()); }
-        }
+        internal SyntaxTrivia  LeadingTrivia => this .GetLeadingTrivia() as SyntaxTrivia;
+        internal SyntaxTrivia TrailingTrivia => this.GetTrailingTrivia() as SyntaxTrivia;
 
-        internal SyntaxList<CSharpSyntaxNode> TrailingTrivia
-        {
-            get { return new SyntaxList<CSharpSyntaxNode>(this.GetTrailingTrivia()); }
-        }
+        internal SyntaxList<CSharpSyntaxNode>  LeadingTrivias => new(this .GetLeadingTrivia());
+        internal SyntaxList<CSharpSyntaxNode> TrailingTrivias => new(this.GetTrailingTrivia());
 
         public sealed override GreenNode WithLeadingTrivia(GreenNode trivia)
         {
             return TokenWithLeadingTrivia(trivia);
         }
-
         public virtual SyntaxToken TokenWithLeadingTrivia(GreenNode trivia)
         {
             return new SyntaxTokenWithTrivia(this.Kind, trivia, null, this.GetDiagnostics(), this.GetAnnotations());
