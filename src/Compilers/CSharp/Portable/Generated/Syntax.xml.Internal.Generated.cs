@@ -19595,18 +19595,6 @@ internal partial class ContextAwareSyntax
             case SyntaxKind.PointerMemberAccessExpression: break;
             default: throw new ArgumentException(nameof(kind));
         }
-#if DEBUG
-        if (expression == null) throw new ArgumentNullException(nameof(expression));
-        if (operatorToken == null) throw new ArgumentNullException(nameof(operatorToken));
-        switch (operatorToken.Kind)
-        {
-            case SyntaxKind.DotToken:
-            case SyntaxKind.DotExcalamationToken:
-            case SyntaxKind.MinusGreaterThanToken: break;
-            default: throw new ArgumentException(nameof(operatorToken));
-        }
-        if (name == null) throw new ArgumentNullException(nameof(name));
-#endif
 
         int hash;
         var cached = CSharpSyntaxNodeCache.TryGetNode((int)kind, expression, operatorToken, name, this.context, out hash);
