@@ -260,13 +260,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return true;
             }
 
-            // If exactly one of source or destination is of type 'void' then no conversion may exist.
-            if (sourceIsVoid || destIsVoid)
-            {
-                conversion = Conversion.NoConversion;
-                return true;
-            }
-
             conversion = default;
             return false;
         }
@@ -1016,6 +1009,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(sourceExpression != null || (object)source != null);
             Debug.Assert(sourceExpression == null || (object)sourceExpression.Type == (object)source);
             Debug.Assert((object)destination != null);
+
+            if (source.SpecialType == SpecialType.System_Void)
+            {
+
+            }
 
             if (HasImplicitDynamicConversionFromExpression(source, destination))
             {

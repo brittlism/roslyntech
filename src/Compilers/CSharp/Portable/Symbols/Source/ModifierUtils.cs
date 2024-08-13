@@ -464,7 +464,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         internal static bool CheckAccessibility(DeclarationModifiers modifiers, Symbol symbol, bool isExplicitInterfaceImplementation, BindingDiagnosticBag diagnostics, Location errorLocation)
-        {
+        { // SPEC: It is an error for the same modifier to appear multiple times in an operator declaration.
             if (!IsValidAccessibility(modifiers))
             {
                 // error CS0107: More than one protection modifier

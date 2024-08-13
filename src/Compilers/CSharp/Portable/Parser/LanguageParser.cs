@@ -1276,10 +1276,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 nameEquals, nameColon, this.ParseExpressionCore());
         }
 
-        private static DeclarationModifiers GetModifierExcludingScoped(SyntaxToken token)
+        public static bool IsAccessorModifier(SyntaxToken token)
+            => GetAccessorModifiers(token) != DeclarationModifiers.None;
+        public static DeclarationModifiers GetAccessorModifiers(SyntaxToken token)
+            => GetModifierExcludingScoped(token) & DeclarationModifiers.AccessibilityMask;
+        public static DeclarationModifiers GetModifierExcludingScoped(SyntaxToken token)
             => GetModifierExcludingScoped(token.Kind, token.ContextualKind);
-
-        internal static DeclarationModifiers GetModifierExcludingScoped(SyntaxKind kind, SyntaxKind contextualKind)
+        public static DeclarationModifiers GetModifierExcludingScoped(SyntaxKind kind, SyntaxKind contextualKind)
         {
             switch (kind)
             {
@@ -1370,13 +1373,12 @@ accessorAccessibilityModifier = null;
                 }
                 else if ( (newMod & DeclarationModifiers.AccessibilityMask) != 0)
                 {
-                    var NextToken = this.PeekToken(1);
-                    if (GetModifierExcludingScoped(NextToken) != DeclarationModifiers.None)
+                    if (IsAccessorModifier(this.PeekToken(1)))
                     {
-                        if (GetModifierExcludingScoped(this.PeekToken(2)) == DeclarationModifiers.None)
+                        if (IsAccessorModifier(this.PeekToken(2)))
                         {
-                            tokens.Add(SyntaxFactory.MergeTokens(this.EatToken(), NextToken = this.EatToken()));
-                            accessorAccessibilityModifier = NextToken;// = this.EatToken();
+                            tokens.Add(SyntaxFactory.MergeTokens(this.EatToken(),
+                                accessorAccessibilityModifier = this.EatToken()));
                             continue;
                         }
                     }
@@ -7468,9 +7470,9 @@ done:;
             {
                 // This is a predefined type
                 var token = this.EatToken();
-                if (token.Kind == SyntaxKind.VoidKeyword && this.CurrentToken.Kind != SyntaxKind.AsteriskToken)
+                if (mode != ParseTypeMode.Parameter && token.Kind == SyntaxKind.VoidKeyword && this.CurrentToken.Kind != SyntaxKind.AsteriskToken)
                 {
-                    token = this.AddError(token, mode == ParseTypeMode.Parameter ? ErrorCode.ERR_NoVoidParameter : ErrorCode.ERR_NoVoidHere);
+                    token = this.AddError(token, ErrorCode.ERR_NoVoidHere);
                 }
 
                 return _syntaxFactory.PredefinedType(token);
@@ -11304,47 +11306,16 @@ done:;
                 this.PeekToken(tokenIndex + 1).Kind != SyntaxKind.AsteriskToken;
         }
 
-        static SyntaxToken NextToken_, ExclToken_;
         private ExpressionSyntax ParsePostFixExpression(ExpressionSyntax expr)
         {
-            bool Perforate(in SyntaxToken syntaxToken, out MemberAccessExpressionSyntax expression)
-            {
-                if (syntaxToken.TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia) &&
-                            this.PeekToken(1).Kind == SyntaxKind.IdentifierToken && this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
-                    return (expression = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected))) is not null;
-                return (expression = null) is not null;
-            }
+            Debug.Assert(expr != null);
 
-            ParenthesizedLambdaExpressionSyntax CreateLambdaBlockExpression(BlockSyntax validBlockSyntax)
-                => _syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null, _syntaxFactory.ParameterList(),
-                            SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), validBlockSyntax, null);
-
-            ParenthesizedLambdaExpressionSyntax CreateLambdaExpressionSyntax(SyntaxToken openToken)
-                => _syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null,
-                            _syntaxFactory.ParameterList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)),
-                            SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), null,
-                                _syntaxFactory.InvocationExpression(expr, openToken == null ? _syntaxFactory.ArgumentList() : ParseParenthesizedArgumentList(openToken)));
-
-            BlockSyntax ReturnVoid(StatementSyntax statement)
-            {
-                SyntaxListBuilder<StatementSyntax> statements = new();
-
-                statements.Add(statement);
-                statements.Add(_syntaxFactory.ReturnStatement(new(), SyntaxFactory.MissingToken(SyntaxKind.ReturnKeyword),
-                    _syntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression, SyntaxFactory.MissingToken(SyntaxKind.NullKeyword)),
-                                            SyntaxFactory.MissingToken(SyntaxKind.SemicolonToken)));
-
-                BlockSyntax blkSyntX = _syntaxFactory.Block(
-                    new(), SyntaxFactory.MissingToken(SyntaxKind.OpenBraceToken), statements.ToList(), SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken));
-
-                return blkSyntX;
-            }
-
-            Debug.Assert(expr != null);///
             while (true)
             {
-                // If the set of postfix expressions is updated here, please review ParseStatementAttributeDeclarations to see if
-                // it  may need a similar look-ahead check to determine if something is a collection expression versus an attribute.
+                // If the set of postfix expressions is updated here, please review ParseStatementAttributeDeclarations
+                // to see if it may need a similar look-ahead check to determine if something is a collection expression
+                // versus an attribute.
+
                 switch (this.CurrentToken.Kind)
                 {
                     case SyntaxKind.OpenParenToken:
@@ -11382,6 +11353,28 @@ done:;
                         expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.PointerMemberAccessExpression, expr, this.EatToken(), this.ParseSimpleName(NameOptions.InExpression));
                         continue;
 
+                    case SyntaxKind.DotToken:
+                        // if we have the error situation:
+                        //
+                        //      expr.
+                        //      X Y
+                        //
+                        // Then we don't want to parse this out as "Expr.X"
+                        //
+                        // It's far more likely the member access expression is simply incomplete and
+                        // there is a new declaration on the next line.
+                        if (this.CurrentToken.TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia) &&
+                            this.PeekToken(1).Kind == SyntaxKind.IdentifierToken &&
+                            this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
+                        {
+                            return _syntaxFactory.MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression, expr, this.EatToken(),
+                                this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected));
+                        }
+
+                        expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, this.EatToken(), this.ParseSimpleName(NameOptions.InExpression));
+                        continue;
+
                     case SyntaxKind.QuestionToken:
                         if (CanStartConsequenceExpression())
                         {
@@ -11395,82 +11388,7 @@ done:;
                         return expr;
 
                     case SyntaxKind.ExclamationToken:
-
-                        ExclToken_ = this.EatToken();
-                        if (NoTriviaBetween(ExclToken_, NextToken_ = this.CurrentToken))
-                        {
-                            switch (NextToken_.Kind)
-                            {
-                                case SyntaxKind.OpenParenToken when this.EatToken() == NextToken_:
-                                    CreateLambdaExpressionSyntax(SyntaxFactory.MergeToken(SyntaxKind.ExclamationMarkParenthesisOpenToken, ExclToken_, NextToken_));
-                                    break;
-                                case SyntaxKind.IdentifierToken:
-                                    CreateLambdaBlockExpression(ReturnVoid(
-                                        _syntaxFactory.ExpressionStatement(this.ParsePostFixExpression(expr))));
-                                    break;
-                                //case SyntaxKind.ExclamationToken when Eat():
-
-                                //break;
-                                default:
-                                    _syntaxFactory.PostfixUnaryExpression(SyntaxKind.SuppressNullableWarningExpression, expr, ExclToken_);
-                                    break;
-
-                            }
-                        }
-
-                        
-                        continue;
-
-                    case SyntaxKind.DotToken:
-                        // if we have the error situation:
-                        //
-                        //      expr.
-                        //      X Y
-                        //
-                        // Then we don't want to parse this out as "Expr.X"
-                        //
-                        // It's far more likely the member access expression is simply incomplete and
-                        // there is a new declaration on the next line.
-
-                        var dotToken = this.EatToken();
-                        var ex = NoTriviaBetween(dotToken, this.CurrentToken) ? this.TryEatToken(SyntaxKind.ExclamationToken) : null;
-                        var syntaxToken = ex is null ? dotToken : SyntaxFactory.MergeToken(SyntaxKind.DotExcalamationToken, dotToken, ex);
-
-                        if (Perforate(in syntaxToken, out MemberAccessExpressionSyntax syntax)) return syntax;
-                        //add the ability for identifiers later (better call/invocations)
-
-                        var OldCurrentToken = this.CurrentToken;
-                        expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, this.ParseSimpleName(NameOptions.InExpression));
-                        ex = syntaxToken; syntaxToken = null;
-
-                        if (this.CurrentToken.Kind == SyntaxKind.ExclamationToken)
-                        {
-                            NextToken_ = this.PeekToken(1);
-                            if (NoTriviaBetween(OldCurrentToken, this.CurrentToken) || NoTriviaBetween(this.CurrentToken, NextToken_))
-                            {
-                                (ExclToken_, NextToken_) = NextToken_.Kind == SyntaxKind.OpenParenToken ? (this.EatToken(), this.EatToken()) : (null, null);
-                                if (NextToken_ is not null)
-                                    syntaxToken = SyntaxFactory.MergeToken(SyntaxKind.ExclamationMarkParenthesisOpenToken, ExclToken_, NextToken_);
-                            }
-                        }
-                        else 
-                            syntaxToken = this.TryEatToken(SyntaxKind.OpenParenToken);
-
-                        if (syntaxToken != null)
-                        {
-                            if (ex == dotToken && syntaxToken.Kind == SyntaxKind.OpenParenToken)
-                                expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList(syntaxToken));
-                            else
-                                expr = CreateLambdaExpressionSyntax(syntaxToken ?? this.TryEatToken(SyntaxKind.OpenParenToken));
-                        }
-                        else if (ex != dotToken)
-                        {
-                            if (this.CurrentToken.Kind == SyntaxKind.ExclamationToken)
-                                expr = CreateLambdaExpressionSyntax(null);
-                            else
-                                expr = _syntaxFactory.InvocationExpression(expr, _syntaxFactory.ArgumentList());
-                        }
-
+                        expr = _syntaxFactory.PostfixUnaryExpression(SyntaxKind.SuppressNullableWarningExpression, expr, this.EatToken());
                         continue;
 
                     default:
@@ -13741,3 +13659,209 @@ tryAgain:
         }
     }
 }
+
+
+
+
+/*
+ * 
+ 
+        static SyntaxToken OldCurrentToken, syntax_Token, NextToken_, ExclToken_;
+        private ExpressionSyntax ParsePostFixExpression(ExpressionSyntax expr)
+        {
+            bool Perforate(in SyntaxToken syntaxToken, out MemberAccessExpressionSyntax expression)
+            {
+                if (syntaxToken.TrailingTrivias.Any((int)SyntaxKind.EndOfLineTrivia) &&
+                            this.PeekToken(1).Kind == SyntaxKind.IdentifierToken && this.PeekToken(2).ContextualKind == SyntaxKind.IdentifierToken)
+                    return (expression = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntaxToken, this.AddError(this.CreateMissingIdentifierName(), ErrorCode.ERR_IdentifierExpected))) is not null;
+                return (expression = null) is not null;
+            }
+
+            ParenthesizedLambdaExpressionSyntax CreateLambdaBlockExpression(BlockSyntax validBlockSyntax)
+                => _syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null, _syntaxFactory.ParameterList(),
+                            SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), validBlockSyntax, null);
+
+            ParenthesizedLambdaExpressionSyntax CreateLambdaExpressionSyntax(SyntaxToken openToken)
+                => _syntaxFactory.ParenthesizedLambdaExpression(new(), new(), null,
+                            _syntaxFactory.ParameterList(SyntaxFactory.MissingToken(SyntaxKind.OpenParenToken), new(), SyntaxFactory.MissingToken(SyntaxKind.CloseParenToken)),
+                            SyntaxFactory.MissingToken(SyntaxKind.EqualsGreaterThanToken), null,
+                                _syntaxFactory.InvocationExpression(expr, openToken == null ? _syntaxFactory.ArgumentList() : ParseParenthesizedArgumentList(openToken)));
+
+            BlockSyntax ReturnDefault(StatementSyntax statement)
+            {
+                SyntaxListBuilder<StatementSyntax> statements = new(2);
+
+                statements.Add(statement);
+                statements.Add(_syntaxFactory.ReturnStatement(new(), SyntaxFactory.MissingToken(SyntaxKind.ReturnKeyword),
+                    _syntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression, SyntaxFactory.MissingToken(SyntaxKind.DefaultKeyword)),
+                                            SyntaxFactory.MissingToken(SyntaxKind.SemicolonToken)));
+
+                BlockSyntax blkSyntX = _syntaxFactory.Block(
+                    new(), SyntaxFactory.MissingToken(SyntaxKind.OpenBraceToken), statements.ToList(), SyntaxFactory.MissingToken(SyntaxKind.CloseBraceToken));
+
+                return blkSyntX;
+            }
+
+            Debug.Assert(expr != null);///
+            while (true)
+            {
+                // If the set of postfix expressions is updated here, please review ParseStatementAttributeDeclarations to see if
+                // it  may need a similar look-ahead check to determine if something is a collection expression versus an attribute.
+                switch (this.CurrentToken.Kind)
+                {
+                    case SyntaxKind.OpenParenToken:
+                        expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList());
+                        continue;
+
+                    case SyntaxKind.OpenBracketToken:
+                        expr = _syntaxFactory.ElementAccessExpression(expr, this.ParseBracketedArgumentList());
+                        continue;
+
+                    case SyntaxKind.PlusPlusToken:
+                    case SyntaxKind.MinusMinusToken:
+                        expr = _syntaxFactory.PostfixUnaryExpression(SyntaxFacts.GetPostfixUnaryExpression(this.CurrentToken.Kind), expr, this.EatToken());
+                        continue;
+
+                    case SyntaxKind.ColonColonToken:
+                        if (this.PeekToken(1).Kind == SyntaxKind.IdentifierToken)
+                        {
+                            expr = _syntaxFactory.MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression,
+                                expr,
+                                // replace :: with missing dot and annotate with skipped text "::" and error
+                                this.ConvertToMissingWithTrailingTrivia(this.AddError(this.EatToken(), ErrorCode.ERR_UnexpectedAliasedName), SyntaxKind.DotToken),
+                                this.ParseSimpleName(NameOptions.InExpression));
+                        }
+                        else
+                        {
+                            // just some random trailing :: ?
+                            expr = AddTrailingSkippedSyntax(expr, this.EatTokenWithPrejudice(SyntaxKind.DotToken));
+                        }
+
+                        continue;
+
+                    case SyntaxKind.MinusGreaterThanToken:
+                        expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.PointerMemberAccessExpression, expr, this.EatToken(), this.ParseSimpleName(NameOptions.InExpression));
+                        continue;
+
+                    case SyntaxKind.QuestionToken:
+                        if (CanStartConsequenceExpression())
+                        {
+                            expr = _syntaxFactory.ConditionalAccessExpression(
+                                expr,
+                                this.EatToken(),
+                                ParseConsequenceSyntax());
+                            continue;
+                        }
+
+                        return expr;
+
+                    case SyntaxKind.ExclamationToken:
+
+                        ExclToken_ = this.EatToken();
+                        if (NoTriviaBetween(ExclToken_, NextToken_ = this.CurrentToken))
+                        {
+                            switch (NextToken_.Kind)
+                            {
+                                case SyntaxKind.OpenParenToken when this.EatToken() == NextToken_:
+                                    CreateLambdaExpressionSyntax(SyntaxFactory.MergeToken(SyntaxKind.ExclamationMarkParenthesisOpenToken, ExclToken_, NextToken_));
+                                    break;
+                                case SyntaxKind.IdentifierToken:
+                                    if (Perforate(in ExclToken_, out MemberAccessExpressionSyntax _syn)) return _syn;
+
+                                    expr = _syntaxFactory.InvocationExpression(
+                                                _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, ExclToken_, 
+                                                this.ParseSimpleName(NameOptions.InExpression)), Hoperand(out SyntaxToken delimitor) ?
+                                                this.ParseParenthesizedArgumentList(delimitor) : _syntaxFactory.ArgumentList());
+
+                                    expr = CreateLambdaBlockExpression(ReturnDefault(_syntaxFactory.ExpressionStatement(expr)));
+
+                                    expr = (delimitor == null                                                   // no ( nor !(
+                                        && this.CurrentToken.Kind == SyntaxKind.ExclamationToken)              // but !, was instead found in fact.
+                                        || delimitor.Kind == SyntaxKind.ExclamationMarkParenthesisOpenToken ? // no (, but instead !( was found.
+                                            expr : _syntaxFactory.InvocationExpression(expr, _syntaxFactory.ArgumentList());
+                                        
+                                    break;
+                                //case SyntaxKind.ExclamationToken when Eat():
+
+                                //break;
+                                default:
+                                    _syntaxFactory.PostfixUnaryExpression(SyntaxKind.SuppressNullableWarningExpression, expr, ExclToken_);
+                                    break;
+
+                            }
+                        }
+
+                        bool Hoperand(out SyntaxToken delimitor)
+                        {
+                            delimitor = this.TryEatToken(SyntaxKind.OpenParenToken) ??
+                                (this.CurrentToken.Kind == SyntaxKind.ExclamationToken && this.PeekToken(1).Kind == SyntaxKind.OpenParenToken
+                                ? SyntaxFactory.MergeToken(SyntaxKind.ExclamationMarkParenthesisOpenToken, this.EatToken(), this.EatToken()) : null);
+                            return delimitor != null;
+                        }
+                        
+                        continue;
+
+                    case SyntaxKind.DotToken:
+                        // if we have the error situation:
+                        //
+                        //      expr.
+                        //      X Y
+                        //
+                        // Then we don't want to parse this out as "Expr.X"
+                        //
+                        // It's far more likely the member access expression is simply incomplete and
+                        // there is a new declaration on the next line.
+
+                        var dotToken = this.EatToken();
+                        var ex = NoTriviaBetween(dotToken, this.CurrentToken) ? this.TryEatToken(SyntaxKind.ExclamationToken) : null;
+                        syntax_Token = ex is null ? dotToken : SyntaxFactory.MergeToken(SyntaxKind.DotExcalamationToken, dotToken, ex);
+
+                        if (Perforate(in syntax_Token, out MemberAccessExpressionSyntax syntax)) return syntax;
+                        //add the ability for identifiers later (better call/invocations)
+
+                        OldCurrentToken = this.CurrentToken;
+                        expr = _syntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expr, syntax_Token, this.ParseSimpleName(NameOptions.InExpression));
+                        ex = syntax_Token; syntax_Token = null;
+
+                        if (this.CurrentToken.Kind == SyntaxKind.ExclamationToken)
+                        {
+                            NextToken_ = this.PeekToken(1);
+                            if (NoTriviaBetween(OldCurrentToken, this.CurrentToken) || NoTriviaBetween(this.CurrentToken, NextToken_))
+                            {
+                                if (NextToken_.Kind == SyntaxKind.OpenParenToken)
+                                    syntax_Token = SyntaxFactory.MergeToken(SyntaxKind.ExclamationMarkParenthesisOpenToken, this.EatToken(), this.EatToken());
+                            }
+                            if (syntax_Token is null)
+                            {
+                                expr = _syntaxFactory.PostfixUnaryExpression(SyntaxKind.SuppressNullableWarningExpression, expr, this.EatToken());
+                                continue;
+                            }
+                        }
+                        else
+                            syntax_Token = this.TryEatToken(SyntaxKind.OpenParenToken);
+
+                        if (syntax_Token != null)
+                        {
+                            if (ex == dotToken && syntax_Token.Kind == SyntaxKind.OpenParenToken)
+                                expr = _syntaxFactory.InvocationExpression(expr, this.ParseParenthesizedArgumentList(syntax_Token));
+                            else
+                                expr = CreateLambdaExpressionSyntax(syntax_Token ?? this.TryEatToken(SyntaxKind.OpenParenToken));
+                        }
+                        else if (ex != dotToken)
+                        {
+                            if (this.CurrentToken.Kind == SyntaxKind.ExclamationToken)
+                                expr = CreateLambdaExpressionSyntax(null);
+                            else
+                                expr = _syntaxFactory.InvocationExpression(expr, _syntaxFactory.ArgumentList());
+                        }
+
+                        continue;
+
+                    default:
+                        return expr;
+                }
+            }
+        }
+
+*/

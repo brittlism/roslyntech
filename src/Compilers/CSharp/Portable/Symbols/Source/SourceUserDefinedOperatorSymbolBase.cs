@@ -17,9 +17,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         // tomat: ignoreDynamic should be true, but we don't want to introduce breaking change. See bug 605326.
         private const TypeCompareKind ComparisonForUserDefinedOperators = TypeCompareKind.IgnoreTupleNames | TypeCompareKind.IgnoreNullableModifiersForReferenceTypes;
         private readonly string _name;
-#nullable enable
         private readonly TypeSymbol? _explicitInterfaceType;
-#nullable disable
+
+        private bool IgnoreWrongType;
 
         protected SourceUserDefinedOperatorSymbolBase(
             MethodKind methodKind,
@@ -43,7 +43,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                                                   returnsVoid: false,
                                                   returnsVoidIsSet: false,
                                                   isExpressionBodied: isExpressionBodied,
-                                                  isExtensionMethod: false, isVarArg: false, isNullableAnalysisEnabled: isNullableAnalysisEnabled,
+                                                  (syntax as BaseMethodDeclarationSyntax).isExten is bool isExtension && isExtension, 
+                                                  isVarArg: false, isNullableAnalysisEnabled: isNullableAnalysisEnabled,
                                                   isExplicitInterfaceImplementation: methodKind == MethodKind.ExplicitInterfaceImplementation,
                                                   hasThisInitializer: false)))
         {
@@ -57,15 +58,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 !(syntax is OperatorDeclarationSyntax { OperatorToken: var opToken } && opToken.Kind() is not (SyntaxKind.EqualsEqualsToken or SyntaxKind.ExclamationEqualsToken)))
             {
                 diagnostics.Add(ErrorCode.ERR_InterfacesCantContainConversionOrEqualityOperators, this.GetFirstLocation());
-                // No need to cascade the error further.
                 return;
             }
 
-            if (this.ContainingType.IsStatic)
-            {
-                // Similarly if we're in a static class, though we have not reported it yet.
+            IgnoreWrongType = this.ContainingType.IsStatic || isExtension;
 
-                // CS0715: '{0}': static classes cannot contain user-defined operators
+            if (this.ContainingType.IsStatic && !isExtension)
+            {
                 diagnostics.Add(ErrorCode.ERR_OperatorInStaticClass, location, this);
                 return;
             }
@@ -74,16 +73,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // SPEC: static modifier
             if (this.IsExplicitInterfaceImplementation)
             {
-                if (!this.IsStatic)
-                {
+                if (!this.IsStatic && !isExtension)
                     diagnostics.Add(ErrorCode.ERR_ExplicitImplementationOfOperatorsMustBeStatic, this.GetFirstLocation(), this);
-                }
             }
             else if (this.DeclaredAccessibility != Accessibility.Public || !this.IsStatic)
-            {
-                // CS0558: User-defined operator '...' must be declared static and public
                 diagnostics.Add(ErrorCode.ERR_OperatorsMustBeStatic, this.GetFirstLocation(), this);
-            }
 
             // SPEC: Because an external operator provides no actual implementation, 
             // SPEC: its operator body consists of a semicolon. For expression-bodied
@@ -117,8 +111,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 diagnostics.Add(ErrorCode.ERR_ConcreteMissingBody, location, this);
             }
 
-            // SPEC: It is an error for the same modifier to appear multiple times in an
-            // SPEC: operator declaration.
             ModifierUtils.CheckAccessibility(this.DeclarationModifiers, this, isExplicitInterfaceImplementation: false, diagnostics, location);
         }
 
@@ -234,7 +226,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 declarationSyntax.ParameterList,
                 out arglistToken,
                 allowRefOrOut: true,
-                allowThis: false,
+                allowThis: true,
                 addRefReadOnlyModifier: IsVirtual || IsAbstract,
                 diagnostics: diagnostics).Cast<SourceParameterSymbol, ParameterSymbol>();
 
@@ -341,19 +333,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         private void CheckOperatorSignatures(BindingDiagnosticBag diagnostics)
         {
-            if (MethodKind == MethodKind.ExplicitInterfaceImplementation)
-            {
-                // The signature is driven by the interface
+            if (MethodKind == MethodKind.ExplicitInterfaceImplementation
+            || !DoesOperatorHaveCorrectArity(this.Name, this.ParameterCount))
                 return;
-            }
-
-            // Have we even got the right formal parameter arity? If not then 
-            // we are in an error recovery scenario and we should just bail 
-            // out immediately.
-            if (!DoesOperatorHaveCorrectArity(this.Name, this.ParameterCount))
-            {
-                return;
-            }
 
             switch (this.Name)
             {
@@ -460,7 +442,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // SPEC: Either S0 or T0 is the class or struct type in which the operator
             // SPEC: declaration takes place.
 
-            if (!MatchesContainingType(source0) &&
+            if (!IgnoreWrongType && 
+                !MatchesContainingType(source0) &&
                 !MatchesContainingType(target0) &&
                 // allow conversion between T and Nullable<T> in declaration of Nullable<T>
                 !MatchesContainingType(source) &&

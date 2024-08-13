@@ -2227,52 +2227,39 @@ namespace Microsoft.CodeAnalysis.CSharp
                         // Single viable result.
                         var singleResult = symbols[0];
 
-                        // Cannot reference System.Void directly.
-                        var singleType = singleResult as TypeSymbol;
-                        if ((object)singleType != null && singleType.PrimitiveTypeCode == Cci.PrimitiveTypeCode.Void && simpleName == "Void")
-                        {
-                            wasError = true;
-                            var errorInfo = new CSDiagnosticInfo(ErrorCode.ERR_SystemVoid);
-                            diagnostics.Add(errorInfo, where.Location);
-                            singleResult = new ExtendedErrorTypeSymbol(GetContainingNamespaceOrType(singleResult), singleResult, LookupResultKind.NotReferencable, errorInfo); // UNDONE: Review resultkind.
-                        }
                         // Check for bad symbol.
-                        else
+                        if (singleResult.Kind == SymbolKind.NamedType &&
+                            ((SourceModuleSymbol)this.Compilation.SourceModule).AnyReferencedAssembliesAreLinked)
                         {
-                            if (singleResult.Kind == SymbolKind.NamedType &&
-                                ((SourceModuleSymbol)this.Compilation.SourceModule).AnyReferencedAssembliesAreLinked)
+                            // Complain about unembeddable types from linked assemblies.
+                            if (diagnostics.DiagnosticBag is object)
                             {
-                                // Complain about unembeddable types from linked assemblies.
-                                if (diagnostics.DiagnosticBag is object)
-                                {
-                                    Emit.NoPia.EmbeddedTypesManager.IsValidEmbeddableType((NamedTypeSymbol)singleResult, where, diagnostics.DiagnosticBag);
-                                }
-                            }
-
-                            if (!suppressUseSiteDiagnostics)
-                            {
-                                wasError = ReportUseSite(singleResult, diagnostics, where);
-                            }
-                            else if (singleResult.Kind == SymbolKind.ErrorType)
-                            {
-                                // We want to report ERR_CircularBase error on the spot to make sure
-                                // that the right location is used for it.
-                                var errorType = (ErrorTypeSymbol)singleResult;
-
-                                if (errorType.Unreported)
-                                {
-                                    DiagnosticInfo errorInfo = errorType.ErrorInfo;
-
-                                    if (errorInfo != null && errorInfo.Code == (int)ErrorCode.ERR_CircularBase)
-                                    {
-                                        wasError = true;
-                                        diagnostics.Add(errorInfo, where.Location);
-                                        singleResult = new ExtendedErrorTypeSymbol(GetContainingNamespaceOrType(errorType), errorType.Name, errorType.Arity, errorInfo, unreported: false);
-                                    }
-                                }
+                                Emit.NoPia.EmbeddedTypesManager.IsValidEmbeddableType((NamedTypeSymbol)singleResult, where, diagnostics.DiagnosticBag);
                             }
                         }
 
+                        if (!suppressUseSiteDiagnostics)
+                        {
+                            wasError = ReportUseSite(singleResult, diagnostics, where);
+                        }
+                        else if (singleResult.Kind == SymbolKind.ErrorType)
+                        {
+                            // We want to report ERR_CircularBase error on the spot to make sure
+                            // that the right location is used for it.
+                            var errorType = (ErrorTypeSymbol)singleResult;
+
+                            if (errorType.Unreported)
+                            {
+                                DiagnosticInfo errorInfo = errorType.ErrorInfo;
+
+                                if (errorInfo != null && errorInfo.Code == (int)ErrorCode.ERR_CircularBase)
+                                {
+                                    wasError = true;
+                                    diagnostics.Add(errorInfo, where.Location);
+                                    singleResult = new ExtendedErrorTypeSymbol(GetContainingNamespaceOrType(errorType), errorType.Name, errorType.Arity, errorInfo, unreported: false);
+                                }
+                            }
+                        }
                         return singleResult;
                     }
                 }
